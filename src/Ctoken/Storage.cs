@@ -196,5 +196,36 @@ namespace Ctoken
                 return result;
             }
         }
+
+
+        public static class InterestModel
+        {
+
+            static string key = "InterestModel";
+
+            public static StorageMap InterestModelMap = new StorageMap(Storage.CurrentContext, key);
+            public static void Put(UInt160 address)
+            {
+                object isInterestModelObj = Contract.Call(address, "isInterestModel", CallFlags.All, new object[] { });
+                if (!(bool)isInterestModelObj) throw new Exception("This is not a InterestModel");
+                InterestModelMap.Put(key, address);
+            }
+
+            public static UInt160 Get()
+            {
+                UInt160 address = (UInt160)InterestModelMap.Get(key);
+                object isInterestModelObj = Contract.Call(address, "isInterestModel", CallFlags.All, new object[] { });
+                if (!(bool)isInterestModelObj) throw new Exception("This is not a InterestModel");
+                return address;
+            }
+
+
+        }
+
+
+
+
+
+
     }
 }

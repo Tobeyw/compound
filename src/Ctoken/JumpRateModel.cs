@@ -1,6 +1,6 @@
 using Neo;
 using Neo.SmartContract.Framework;
-
+using Neo.SmartContract.Framework.Services;
 
 namespace Ctoken
 {
@@ -12,31 +12,20 @@ namespace Ctoken
         //The approximate number of blocks per year that is assumed by the interest rate model
         public static uint blocksPerYear = 2102400;
 
-        public static ulong Decimals() => 8;
-
-        public static ulong carry = 100_000_000;
 
 
         public static void PutInterestAttribute(uint _multiplierPerBlock, uint _baseRatePerBlock, uint _jumpMultiplierPerBlock, uint _kink)
         {
-            defaultInterestAtrributes.Put(
-                new InterestAtrributes
-                {
-                    multiplierPerBlock = _multiplierPerBlock,
-                    baseRatePerBlock = _baseRatePerBlock,
-                    jumpMultiplierPerBlock = _jumpMultiplierPerBlock,
-                    kink = _kink
-
-                }
-                );
+            UInt160 InterestModelAddress = InterestModel.Get();
+            Contract.Call(InterestModelAddress, "PutInterestAttribute", CallFlags.All, new object[] { _multiplierPerBlock, _baseRatePerBlock, _jumpMultiplierPerBlock , _kink });
 
         }
 
         public static InterestAtrributes getInterestAttribute()
         {
-
-            return defaultInterestAtrributes.Get();
-
+            UInt160 InterestModelAddress = InterestModel.Get();
+            object modelObj = Contract.Call(InterestModelAddress, "getInterestAttribute", CallFlags.All, new object[] { });
+            return (InterestAtrributes)modelObj;
 
         }
 
@@ -49,13 +38,9 @@ namespace Ctoken
         /// <returns>The utilization rate as a mantissa between [0, 1e8]</returns>
         public static ulong utilizationRate(ulong cash, ulong borrows, ulong reserves)
         {
-            if (borrows == 0)
-            {
-                return 0;
-            }
-            ulong result = borrows / (cash + borrows - reserves);
-
-            return result;
+            UInt160 InterestModelAddress = InterestModel.Get();
+            object utilizationRateObj = Contract.Call(InterestModelAddress, "getInterestAttribute", CallFlags.All, new object[] { cash,borrows, reserves });
+            return (ulong)utilizationRateObj;
 
         }
 
@@ -68,35 +53,9 @@ namespace Ctoken
         /// <returns>The borrow rate percentage per block as a mantissa (scaled by 1e8)</returns>
         public static ulong getBorrowRate(ulong cash, ulong borrows, ulong reserves)
         {
-            InterestAtrributes interestAtrributes = getInterestAttribute();
-
-            uint kink = interestAtrributes.kink;
-
-            uint multiplierPerBlock = interestAtrributes.multiplierPerBlock;
-
-            uint baseRatePerBlock = interestAtrributes.baseRatePerBlock;
-
-            uint jumpMultiplierPerBlock = interestAtrributes.jumpMultiplierPerBlock;
-
-            ulong util = utilizationRate(cash, borrows, reserves);
-            if (util <= kink)
-            {
-
-
-                ulong result = (util * multiplierPerBlock) / carry + baseRatePerBlock;
-                return result;
-            }
-            else
-            {
-                ulong normalRate = (kink * multiplierPerBlock) / carry + baseRatePerBlock;
-
-                ulong excessUtil = util - kink;
-
-                ulong result = (excessUtil * jumpMultiplierPerBlock) / carry + normalRate;
-                return result;
-
-
-            }
+            UInt160 InterestModelAddress = InterestModel.Get();
+            object BorrowRateObj = Contract.Call(InterestModelAddress, "getBorrowRate", CallFlags.All, new object[] { cash, borrows, reserves });
+            return (ulong)BorrowRateObj;
         }
 
         /// <summary>
@@ -109,18 +68,9 @@ namespace Ctoken
         /// <returns>The supply rate percentage per block as a mantissa (scaled by 1e8)</returns>
         public static ulong getSupplyRate(ulong cash, ulong borrows, ulong reserves, ulong reserveFactorMantissa)
         {
-            ulong oneMinusReserveFactor = carry - reserveFactorMantissa;
-
-            ulong borrowRate = getBorrowRate(cash, borrows, reserves);
-
-            ulong rateToPool = borrowRate * oneMinusReserveFactor / carry;
-
-            ulong utilRate = utilizationRate(cash, borrows, reserves);
-
-            //result = 
-            ulong result = utilRate * (rateToPool) / carry;
-
-            return result;
+            UInt160 InterestModelAddress = InterestModel.Get();
+            object SupplyRateObj = Contract.Call(InterestModelAddress, "getSupplyRate", CallFlags.All, new object[] { cash, borrows, reserves, reserveFactorMantissa });
+            return (ulong)SupplyRateObj;
         }
     }
 }

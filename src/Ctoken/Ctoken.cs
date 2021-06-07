@@ -1,4 +1,5 @@
 using Neo;
+
 using Neo.SmartContract;
 using Neo.SmartContract.Framework;
 
@@ -21,7 +22,8 @@ namespace Ctoken
                         uint initialExchangeRateMantissa_,
                         string name_,
                         string symbol_,
-                        ulong decimals_)
+                        ulong decimals_/*,
+                        UInt160 comptroller*/)
         {
             AdminSnapshot adminSnapshot = defaultAdmin.Get();
             AccountSnapshot accSnapshot = defaultMessage.Get();
@@ -40,11 +42,11 @@ namespace Ctoken
             {
                 throw new Exception("initial exchange rate must be greater than zero");
             }
-            //uint err = _setComptroller();
-            //if (err != (uint)Error.NO_ERROR)
-            //{
-            //    throw new Exception("setting comptroller failed");
-            //}
+            /*uint err = setComptroller(comptroller);
+            if (err != (uint)Error.NO_ERROR)
+            {
+                throw new Exception("setting comptroller failed");
+            }*/
 
             accSnapshot.accrualBlockNumber = getBlockNumber();
             accSnapshot.borrowIndex = mantissaOne;
@@ -118,7 +120,7 @@ namespace Ctoken
         #endregion
 
         public static Boolean isCToken() => true;
-        public static Boolean isComptroller() => true;
+        
 
 
 
@@ -186,7 +188,7 @@ namespace Ctoken
             return transferTokens(sender, sender, dst, amount) == (int)Error.NO_ERROR;
         }
 
-        public static bool transfetFrom(UInt160 src, UInt160 dst, uint amount)
+        public static bool transferFrom(UInt160 src, UInt160 dst, uint amount)
         {
             Transaction tx = (Transaction)Runtime.ScriptContainer;
             UInt160 sender = tx.Sender;
@@ -384,6 +386,35 @@ namespace Ctoken
             return getCashPrior();
         }
 
+
+        public static void putAcc()
+        {
+            AccountSnapshot acc = new AccountSnapshot()
+            {
+                 reservesFactorMantissa =9,
+        initialExchangeRateMantissa = 2,
+        accrualBlockNumber = 10,
+         borrowIndex = 10,
+        totalBorrows=40,
+        totalReserves=50,
+        totalSupply=100,
+         _notEntered = false,
+        name = "CNY",
+        symbol = "CToken",
+        decimals = 8,
+        borrowRateMaxMantissa = 100000,
+        reservesFactorMaxMantissa = 1000000000
+
+    };
+
+
+
+
+
+
+        }
+
+
         public static uint accrueInterest()
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
@@ -483,66 +514,67 @@ namespace Ctoken
         public static (uint, uint) mintFresh(UInt160 minter, uint mintAmount)
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            UInt160 theToken = Runtime.ExecutingScriptHash;
+/*            UInt160 theToken = Runtime.ExecutingScriptHash;
             UInt160 comptroller = getComptroller();
             Object allowedObj = Contract.Call(comptroller, "mintAllowed", CallFlags.All, new object[] { theToken,minter,mintAmount });
             int allowed = (int)allowedObj;
             if (allowed != 0)
             {
                 return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.MINT_COMPTROLLER_REJECTION, (int)allowed), 0);
-            }
+            }*/
 
             if (accSnapshot.accrualBlockNumber != getBlockNumber())
             {
                 return (fail(Error.MARKET_NOT_FRESH, FailureInfo.MINT_FRESHNESS_CHECK), 0);
             }
+            MathError mathErr;
+            uint exchangeRateMantissa;
+            uint mintTokens;
+            uint totalSupplyNew;
+            uint accountTokensNew;
+            uint actualMintAmount;
 
+            (mathErr, exchangeRateMantissa) = exchangeRateStoredInternal();
 
-            MintLocalVars vars;
-    
-
-
-            (vars.mathErr, vars.exchangeRateMantissa) = exchangeRateStoredInternal();
-
-            if (vars.mathErr != MathError.NO_ERROR)
+            if (mathErr != MathError.NO_ERROR)
             {
-                return (failOpaque(Error.MATH_ERROR, FailureInfo.MINT_EXCHANGE_RATE_READ_FAILED, (int)vars.mathErr), 0);
+                return (failOpaque(Error.MATH_ERROR, FailureInfo.MINT_EXCHANGE_RATE_READ_FAILED, (int)mathErr), 0);
             }
 
-            vars.actualMintAmount = doTransferIn(minter, mintAmount);
+            actualMintAmount = doTransferIn(minter, mintAmount);
             Exp exp = new Exp();
-            exp.mantissa = vars.exchangeRateMantissa;
+            exp.mantissa = exchangeRateMantissa;
             ulong mintTokensReplace;
-            (vars.mathErr, mintTokensReplace) = divScalarByExpTruncate(vars.actualMintAmount, exp);
-            vars.mintTokens = (uint)mintTokensReplace;
-            if (vars.mathErr != MathError.NO_ERROR)
+            (mathErr, mintTokensReplace) = divScalarByExpTruncate(actualMintAmount, exp);
+            mintTokens = (uint)mintTokensReplace;
+            if (mathErr != MathError.NO_ERROR)
             {
                 throw new Exception("MINT_EXCHANGE_CALCULATION_FAILED");
             }
 
             ulong totalSupplyNewReplace;
-            (vars.mathErr, totalSupplyNewReplace) = addUInt(accSnapshot.totalSupply, vars.mintTokens);
-            vars.totalSupplyNew = (uint)totalSupplyNewReplace;
-            if (vars.mathErr != MathError.NO_ERROR)
+            (mathErr, totalSupplyNewReplace) = addUInt(accSnapshot.totalSupply, mintTokens);
+            totalSupplyNew = (uint)totalSupplyNewReplace;
+            if (mathErr != MathError.NO_ERROR)
             {
                 throw new Exception("MINT_NEW_TOTAL_SUPPLY_CALCULATION_FAILED");
             }
 
             ulong accountTokensNewRepalce;
-            (vars.mathErr, accountTokensNewRepalce) = addUInt((ulong)accountTokens.Get(minter), vars.mintTokens);
-            vars.accountTokensNew = (uint)accountTokensNewRepalce;
-            if (vars.mathErr != MathError.NO_ERROR)
+            (mathErr, accountTokensNewRepalce) = addUInt((ulong)accountTokens.Get(minter), mintTokens);
+            accountTokensNew = (uint)accountTokensNewRepalce;
+            if (mathErr != MathError.NO_ERROR)
             {
                 throw new Exception("MINT_NEW_ACCOUNT_BALANCE_CALCULATION_FAILED");
             }
 
-            accSnapshot.totalSupply = vars.totalSupplyNew;
-            accountTokens.Put(minter, vars.accountTokensNew);
+            accSnapshot.totalSupply = totalSupplyNew;
+            accountTokens.Put(minter, accountTokensNew);
 
-            OnMint(minter, vars.actualMintAmount, vars.mintTokens);
-            OnTransfer(Runtime.ExecutingScriptHash, minter, vars.mintTokens);
+            OnMint(minter, actualMintAmount, mintTokens);
+            OnTransfer(Runtime.ExecutingScriptHash, minter, mintTokens);
 
-            return ((uint)Error.NO_ERROR, vars.actualMintAmount);
+            return ((uint)Error.NO_ERROR, actualMintAmount);
         }
 
         /*public static uint redeemInternal(uint redeeemTokens)
