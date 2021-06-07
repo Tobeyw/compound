@@ -62,6 +62,8 @@ namespace comptroller
         private static ulong carry = 100_000_000;
         #endregion
 
+        public static Boolean isComptroller() => true;
+
         /// <summary>
         /// Returns the assets an account has entered
         /// </summary>
