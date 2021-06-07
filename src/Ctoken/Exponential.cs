@@ -1,6 +1,6 @@
 
 using Neo.SmartContract.Framework;
-
+using System.Numerics;
 
 namespace Ctoken
 {
@@ -9,16 +9,16 @@ namespace Ctoken
     [ManifestExtra("Description", "This is Exponential")]
     public partial class Ctoken : SmartContract
     {
-        public static (MathError,Exp) getExp(ulong num,ulong denom)
+        public static (MathError,Exp) getExp(BigInteger num, BigInteger denom)
         {
-            (MathError err0, ulong scaledNumerator) = mulUInt(num, expScale);
+            (MathError err0, BigInteger scaledNumerator) = mulUInt(num, expScale);
             if(err0 != MathError.NO_ERROR)
             {
                 Exp exp = new Exp();
                 exp.mantissa = 0;
                 return (err0, exp);
             }
-            (MathError err1, ulong rational) = divUInt(scaledNumerator, denom);
+            (MathError err1, BigInteger rational) = divUInt(scaledNumerator, denom);
             if(err1 != MathError.NO_ERROR)
             {
                 Exp exp = new Exp();
@@ -32,7 +32,7 @@ namespace Ctoken
 
         public static (MathError,Exp) addExp(Exp a,Exp b)
         {
-            (MathError error, ulong result) = addUInt(a.mantissa, b.mantissa);
+            (MathError error, BigInteger result) = addUInt(a.mantissa, b.mantissa);
             Exp exp = new Exp();
             exp.mantissa = result;
             return (error, exp);
@@ -40,15 +40,15 @@ namespace Ctoken
 
         public static (MathError,Exp) subExp(Exp a,Exp b)
         {
-            (MathError error, ulong result) = subUInt(a.mantissa, b.mantissa);
+            (MathError error, BigInteger result) = subUInt(a.mantissa, b.mantissa);
             Exp exp = new Exp();
             exp.mantissa = result;
             return (error, exp);
         }
 
-        public static (MathError,Exp) mulScalar(Exp a, ulong scalar)
+        public static (MathError,Exp) mulScalar(Exp a, BigInteger scalar)
         {
-            (MathError err0, ulong scaledMantissa) = mulUInt(a.mantissa, scalar);
+            (MathError err0, BigInteger scaledMantissa) = mulUInt(a.mantissa, scalar);
             if(err0 != MathError.NO_ERROR)
             {
                 Exp exp = new Exp();
@@ -60,7 +60,7 @@ namespace Ctoken
             return (MathError.NO_ERROR, expReturn);
         }
 
-        public static (MathError,ulong) mulScalarTruncate(Exp a,ulong scalar)
+        public static (MathError, BigInteger) mulScalarTruncate(Exp a, BigInteger scalar)
         {
             (MathError err, Exp product) = mulScalar(a, scalar);
             if (err != MathError.NO_ERROR)
@@ -70,7 +70,7 @@ namespace Ctoken
             return (MathError.NO_ERROR, truncate(product));
         }
 
-        public static (MathError,ulong) mulScalarTruncateAddUInt(Exp a,ulong scalar,ulong addend)
+        public static (MathError, BigInteger) mulScalarTruncateAddUInt(Exp a, BigInteger scalar, BigInteger addend)
         {
             (MathError err, Exp product) = mulScalar(a, scalar);
             if (err != MathError.NO_ERROR)
@@ -80,9 +80,9 @@ namespace Ctoken
             return addUInt(truncate(product), addend);
         }
 
-        public static (MathError,Exp) divScalar(Exp a,ulong scalar)
+        public static (MathError,Exp) divScalar(Exp a, BigInteger scalar)
         {
-            (MathError err0, ulong descaledMantissa) = divUInt(a.mantissa, scalar);
+            (MathError err0, BigInteger descaledMantissa) = divUInt(a.mantissa, scalar);
             if (err0 != MathError.NO_ERROR)
             {
                 Exp exp = new Exp();
@@ -94,9 +94,9 @@ namespace Ctoken
             return (MathError.NO_ERROR, expReturn);
         }
 
-        public static (MathError,Exp) divScalarByExp(ulong scalar,Exp divisor)
+        public static (MathError,Exp) divScalarByExp(BigInteger scalar,Exp divisor)
         {
-            (MathError err0, ulong numerator) = mulUInt(expScale, scalar);
+            (MathError err0, BigInteger numerator) = mulUInt(expScale, scalar);
             if (err0 != MathError.NO_ERROR)
             {
                 Exp exp = new Exp();
@@ -106,7 +106,7 @@ namespace Ctoken
             return getExp(numerator, divisor.mantissa);
         }
 
-        public static (MathError,ulong) divScalarByExpTruncate(ulong scalar,Exp divisor)
+        public static (MathError, BigInteger) divScalarByExpTruncate(ulong scalar,Exp divisor)
         {
             (MathError err, Exp fraction) = divScalarByExp(scalar, divisor);
             if (err != MathError.NO_ERROR)
@@ -118,28 +118,28 @@ namespace Ctoken
 
         public static (MathError,Exp) mulExp(Exp a,Exp b)
         {
-            (MathError err0, ulong doubleScaledProduct) = mulUInt(a.mantissa, b.mantissa);
+            (MathError err0, BigInteger doubleScaledProduct) = mulUInt(a.mantissa, b.mantissa);
             if (err0 != MathError.NO_ERROR)
             {
                 Exp exp = new Exp();
                 exp.mantissa = 0;
                 return (err0, exp);
             }
-            (MathError err1, ulong doubleScaledProductWithHalfScale) = addUInt(halfExpScale, doubleScaledProduct);
+            (MathError err1, BigInteger doubleScaledProductWithHalfScale) = addUInt(halfExpScale, doubleScaledProduct);
             if (err1 != MathError.NO_ERROR)
             {
                 Exp exp = new Exp();
                 exp.mantissa = 0;
                 return (err1, exp);
             }
-            (MathError err2, ulong product) = divUInt(doubleScaledProductWithHalfScale, expScale);
+            (MathError err2, BigInteger product) = divUInt(doubleScaledProductWithHalfScale, expScale);
             //Assert(err2 == MathError.NO_ERROR);
             Exp expReturn = new Exp();
             expReturn.mantissa = product;
             return (MathError.NO_ERROR, expReturn);
         }
 
-        public static (MathError,Exp) mulExp(ulong a,ulong b)
+        public static (MathError,Exp) mulExp(BigInteger a, BigInteger b)
         {
             Exp expA = new Exp();
             Exp expB = new Exp();

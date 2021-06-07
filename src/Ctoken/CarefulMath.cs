@@ -1,6 +1,6 @@
 
 using Neo.SmartContract.Framework;
-
+using System.Numerics;
 
 namespace Ctoken
 {
@@ -17,14 +17,14 @@ namespace Ctoken
             INTEGER_UNDERFLOW
         }
 
-        public static (MathError,ulong) mulUInt(ulong a,ulong b)
+        public static (MathError, BigInteger) mulUInt(BigInteger a, BigInteger b)
         {
             if(a == 0)
             {
                 return (MathError.NO_ERROR, 0);
             }
 
-            ulong c = a * b;
+            BigInteger c = a * b;
 
             if(c / a != b)
             {
@@ -36,7 +36,7 @@ namespace Ctoken
             }
         }
 
-        public static (MathError,ulong) divUInt(ulong a,ulong b)
+        public static (MathError, BigInteger) divUInt(BigInteger a, BigInteger b)
         {
             if(b == 0)
             {
@@ -45,7 +45,7 @@ namespace Ctoken
             return (MathError.NO_ERROR, a / b);
         }
 
-        public static (MathError,ulong) subUInt(ulong a,ulong b)
+        public static (MathError, BigInteger) subUInt(BigInteger a, BigInteger b)
         {
             if(b <= a)
             {
@@ -57,9 +57,9 @@ namespace Ctoken
             }
         }
 
-        public static (MathError,ulong) addUInt(ulong a,ulong b)
+        public static (MathError, BigInteger) addUInt(BigInteger a, BigInteger b)
         {
-            ulong c = a + b;
+            BigInteger c = a + b;
             if (c >= a)
             {
                 return (MathError.NO_ERROR, 0);
@@ -70,9 +70,9 @@ namespace Ctoken
             }
         }
 
-        public static (MathError,ulong) addThenSubUInt(ulong a,ulong b,ulong c)
+        public static (MathError, BigInteger) addThenSubUInt(BigInteger a, BigInteger b, BigInteger c)
         {
-            (MathError err0, ulong sum) = addUInt(a, b);
+            (MathError err0, BigInteger sum) = addUInt(a, b);
             if (err0 != MathError.NO_ERROR)
             {
                 return (err0, 0);

@@ -107,19 +107,19 @@ namespace comptroller
             static string key = "liquidationIncentiveMantissa";
             
 
-            public static void Put(ulong liquidationIncentiveMantissa)
+            public static void Put(BigInteger liquidationIncentiveMantissa)
             {
 
                 string liquidationIncentiveMantissaJson = StdLib.Serialize(liquidationIncentiveMantissa);
                 Storage.Put(Storage.CurrentContext, key, liquidationIncentiveMantissaJson);
             }
 
-            public static ulong Get()
+            public static BigInteger Get()
             {
                 if (Storage.Get(Storage.CurrentContext, key) == null) throw new Exception("Please set the liquidationIncentive before liquidate");
                 string liquidationIncentiveMantissaJson = Storage.Get(Storage.CurrentContext, key);
                 Object liquidationIncentiveMantissa = StdLib.Deserialize(liquidationIncentiveMantissaJson);
-                return (ulong)liquidationIncentiveMantissa;
+                return (BigInteger)liquidationIncentiveMantissa;
             }
         }
 
@@ -127,18 +127,18 @@ namespace comptroller
         {
             static string key = "closeFactorMantissa";
             //public static StorageMap CloseFactorMantissaMap = new StorageMap(Storage.CurrentContext, key);
-            public static void Put(ulong closeFactorMantissa)
+            public static void Put(BigInteger closeFactorMantissa)
             {
                 string closeFactorMantissaJson = StdLib.Serialize(closeFactorMantissa);
                 Storage.Put(Storage.CurrentContext, key, closeFactorMantissaJson);
             }
 
-            public static ulong Get()
+            public static BigInteger Get()
             {
 
                 string closeFactorMantissaJson = Storage.Get(Storage.CurrentContext, key);
                 Object closeFactorMantissa = StdLib.Deserialize(closeFactorMantissaJson);
-                return (ulong)closeFactorMantissa;
+                return (BigInteger)closeFactorMantissa;
             }
         }
 
@@ -146,7 +146,7 @@ namespace comptroller
         {
             public Boolean isListed;
 
-            public ulong collateralFactorMantissa;
+            public BigInteger collateralFactorMantissa;
 
             public Map<UInt160 ,Boolean> accountMembership;
             

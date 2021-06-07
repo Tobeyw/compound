@@ -22,8 +22,9 @@ namespace Ctoken
                         uint initialExchangeRateMantissa_,
                         string name_,
                         string symbol_,
-                        ulong decimals_/*,
-                        UInt160 comptroller*/)
+                        ulong decimals_,
+                        UInt160 comptroller,
+                        UInt160 InterestModel)
         {
             AdminSnapshot adminSnapshot = defaultAdmin.Get();
             AccountSnapshot accSnapshot = defaultMessage.Get();
@@ -79,7 +80,7 @@ namespace Ctoken
         public static event Action<UInt160, UInt160, uint> OnApproval;
 
         [DisplayName("AccrueInterest")]
-        public static event Action<ulong, ulong, ulong, ulong> OnAccrueInterest;
+        public static event Action<BigInteger, BigInteger, BigInteger, BigInteger> OnAccrueInterest;
 
         [DisplayName("Mint")]
         public static event Action<UInt160, ulong, ulong> OnMint;
@@ -151,9 +152,9 @@ namespace Ctoken
             }
 
             MathError mathErr;
-            ulong allowanceNew;
-            ulong srcTokensNew;
-            ulong dstTokensNew;
+            BigInteger allowanceNew;
+            BigInteger srcTokensNew;
+            BigInteger dstTokensNew;
 
             (mathErr, allowanceNew) = subUInt((uint)startingAllowance, tokens);
             if (mathErr != MathError.NO_ERROR)
@@ -222,7 +223,7 @@ namespace Ctoken
         {
             Exp exchangeRate = new Exp();
             exchangeRate.mantissa = exchangeRateCurrent();
-            (MathError mErr, ulong balance) = mulScalarTruncate(exchangeRate, (ulong)accountTokens.Get(owner));
+            (MathError mErr, BigInteger balance) = mulScalarTruncate(exchangeRate, (ulong)accountTokens.Get(owner));
             if (mErr != MathError.NO_ERROR)
             {
                 throw new Exception("balance could not be calculated");
@@ -258,16 +259,16 @@ namespace Ctoken
             return block.Index;
         }
 
-        public static uint borrowRatePerBlock()
+        public static BigInteger borrowRatePerBlock()
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            return (uint)getBorrowRate(getCashPrior(),accSnapshot.totalBorrows, accSnapshot.totalReserves);
+            return (BigInteger)getBorrowRate(getCashPrior(),accSnapshot.totalBorrows, accSnapshot.totalReserves);
         }
 
-        public static uint supplyRatePerBlock()
+        public static BigInteger supplyRatePerBlock()
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            return (uint)getSupplyRate(getCashPrior(), accSnapshot.totalBorrows, accSnapshot.totalReserves,accSnapshot.reservesFactorMantissa);
+            return (BigInteger)getSupplyRate(getCashPrior(), accSnapshot.totalBorrows, accSnapshot.totalReserves,accSnapshot.reservesFactorMantissa);
         }
 
         public static uint totalBorrowCurrent()
@@ -309,8 +310,8 @@ namespace Ctoken
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
             MathError mathErr;
-            ulong pricipalTimesIndex;
-            ulong result;
+            BigInteger pricipalTimesIndex;
+            BigInteger result;
 
             BorrowSnapshot borrowSnapshot = accountBorrows.Get(account);
 
@@ -363,8 +364,8 @@ namespace Ctoken
             }
             else
             {
-                uint totalCash = getCashPrior();
-                ulong cashPlusBorrowMinusReserves;
+                BigInteger totalCash = getCashPrior();
+                BigInteger cashPlusBorrowMinusReserves;
                 Exp exchangeRate;
                 MathError mathErr;
 
@@ -389,32 +390,7 @@ namespace Ctoken
         }
 
 
-        public static void putAcc()
-        {
-            AccountSnapshot acc = new AccountSnapshot()
-            {
-                 reservesFactorMantissa =9,
-        initialExchangeRateMantissa = 2,
-        accrualBlockNumber = 10,
-         borrowIndex = 10,
-        totalBorrows=40,
-        totalReserves=50,
-        totalSupply=100,
-         _notEntered = false,
-        name = "CNY",
-        symbol = "CToken",
-        decimals = 8,
-        borrowRateMaxMantissa = 100000,
-        reservesFactorMaxMantissa = 1000000000
 
-    };
-
-
-
-
-
-
-        }
 
 
         public static uint accrueInterest()
@@ -428,27 +404,27 @@ namespace Ctoken
                 return (uint)Error.NO_ERROR;
             }
 
-            uint cashPrior = getCashPrior();
-            uint borrowPrior = (uint)accSnapshot.totalBorrows;
-            uint reservesPrior = (uint)accSnapshot.totalReserves;
-            uint borrowIndexPrior = (uint)accSnapshot.borrowIndex;
+            BigInteger cashPrior = getCashPrior();
+            BigInteger borrowPrior = accSnapshot.totalBorrows;
+            BigInteger reservesPrior = accSnapshot.totalReserves;
+            BigInteger borrowIndexPrior = accSnapshot.borrowIndex;
 
-            uint borrowRateMantissa = (uint)getBorrowRate(cashPrior, borrowPrior, reservesPrior);
+            BigInteger borrowRateMantissa = getBorrowRate(cashPrior, borrowPrior, reservesPrior);
             if (borrowRateMantissa > accSnapshot.borrowRateMaxMantissa)
             {
                 throw new Exception("borrow rate is absurdly high");
             }
-            (MathError mathErr, ulong blockDelta) = subUInt(currentBlockNumber, accrualBlockNumberPrior);
+            (MathError mathErr, BigInteger blockDelta) = subUInt(currentBlockNumber, accrualBlockNumberPrior);
             if (mathErr != MathError.NO_ERROR)
             {
                 throw new Exception("could not calculate block delta");
             }
 
             Exp simpleInterestFactor;
-            ulong interestAccmulated;
-            ulong totalBorrowsNew;
-            ulong totalReservesNew;
-            ulong borrowIndexNew;
+            BigInteger interestAccmulated;
+            BigInteger totalBorrowsNew;
+            BigInteger totalReservesNew;
+            BigInteger borrowIndexNew;
 
             Exp exp = new Exp();
             exp.mantissa = borrowRateMantissa;
@@ -458,6 +434,7 @@ namespace Ctoken
                 return (uint)failOpaque(Error.MATH_ERROR, FailureInfo.ACCRUE_INTEREST_SIMPLE_INTEREST_FACTOR_CALCULATION_FAILED, (int)mathErr);
             }
             (mathErr, interestAccmulated) = mulScalarTruncate(simpleInterestFactor, borrowPrior);
+
             if (mathErr != MathError.NO_ERROR)
             {
                 return (uint)failOpaque(Error.MATH_ERROR, FailureInfo.ACCRUE_INTEREST_ACCUMULATED_INTEREST_CALCULATION_FAILED, (int)mathErr);
@@ -482,8 +459,8 @@ namespace Ctoken
 
             accSnapshot.accrualBlockNumber = currentBlockNumber;
             accSnapshot.borrowIndex = borrowIndexNew;
-            accSnapshot.totalBorrows = (uint)totalBorrowsNew;
-            accSnapshot.totalReserves = (uint)totalReservesNew;
+            accSnapshot.totalBorrows = totalBorrowsNew;
+            accSnapshot.totalReserves = totalReservesNew;
             defaultMessage.Put(accSnapshot);
 
             OnAccrueInterest(cashPrior, interestAccmulated, borrowIndexNew, totalBorrowsNew);
@@ -546,7 +523,7 @@ namespace Ctoken
             actualMintAmount = doTransferIn(minter, mintAmount);
             Exp exp = new Exp();
             exp.mantissa = exchangeRateMantissa;
-            ulong mintTokensReplace;
+            BigInteger mintTokensReplace;
             (mathErr, mintTokensReplace) = divScalarByExpTruncate(actualMintAmount, exp);
             mintTokens = (uint)mintTokensReplace;
             if (mathErr != MathError.NO_ERROR)
@@ -554,7 +531,7 @@ namespace Ctoken
                 throw new Exception("MINT_EXCHANGE_CALCULATION_FAILED");
             }
 
-            ulong totalSupplyNewReplace;
+            BigInteger totalSupplyNewReplace;
             (mathErr, totalSupplyNewReplace) = addUInt(accSnapshot.totalSupply, mintTokens);
             totalSupplyNew = (uint)totalSupplyNewReplace;
             if (mathErr != MathError.NO_ERROR)
@@ -562,7 +539,7 @@ namespace Ctoken
                 throw new Exception("MINT_NEW_TOTAL_SUPPLY_CALCULATION_FAILED");
             }
 
-            ulong accountTokensNewRepalce;
+            BigInteger accountTokensNewRepalce;
             (mathErr, accountTokensNewRepalce) = addUInt((ulong)accountTokens.Get(minter), mintTokens);
             accountTokensNew = (uint)accountTokensNewRepalce;
             if (mathErr != MathError.NO_ERROR)
@@ -1252,7 +1229,23 @@ namespace Ctoken
         }
 
 
+        public static uint setInterestModel(UInt160 interestModel)
+        {
+            AdminSnapshot adminSnapshot = defaultAdmin.Get();
+            Transaction tx = (Transaction)Runtime.ScriptContainer;
+            UInt160 sender = tx.Sender;
 
+            if (sender != adminSnapshot.admin)
+            {
+                return fail(Error.UNAUTHORIZED, FailureInfo.SET_COMPTROLLER_OWNER_CHECK);
+            }
+
+
+            InterestModel.Put(interestModel);
+
+
+            return (uint)Error.NO_ERROR;
+        }
 
 
         public static uint getCashPrior()

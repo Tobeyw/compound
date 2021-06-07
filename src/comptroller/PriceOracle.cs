@@ -19,7 +19,7 @@ namespace comptroller
             
         }
 
-        public static ulong getUnderlyingPrice(UInt160 cToken)
+        public static BigInteger getUnderlyingPrice(UInt160 cToken)
         {
             return 100;
         }

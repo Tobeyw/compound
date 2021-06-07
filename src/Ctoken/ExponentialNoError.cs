@@ -2,7 +2,7 @@
 using Neo.SmartContract.Framework;
 
 using System;
-
+using System.Numerics;
 
 namespace Ctoken
 {
@@ -11,32 +11,32 @@ namespace Ctoken
     [ManifestExtra("Description", "This is ExponentialNoError")]
     public partial class Ctoken : SmartContract
     {
-        const ulong expScale = 1_000_000_00;
-        const ulong doubleScale = 1_000_000_000_000_000_0;
+        const ulong expScale = 1_000_000_000_000_000_000;
+        const ulong amountScale = 100_000_000;
         const ulong halfExpScale = expScale / 2;
         const ulong mantissaOne = expScale;
 
         public struct Exp
         {
-            public ulong mantissa;
+            public BigInteger mantissa;
         }
 
-        public struct Double {
-            public ulong mantissa;
+        public struct AmountExp {
+            public BigInteger mantissa;
         }
 
-        public static ulong truncate(Exp exp)
+        public static BigInteger truncate(Exp exp)
         {
             return exp.mantissa / expScale;
         }
 
-        public static ulong mul_ScalarTruncate(Exp a,ulong scalar)
+        public static BigInteger mul_ScalarTruncate(Exp a, BigInteger scalar)
         {
             Exp product = mul_(a, scalar);
             return truncate(product);
         }
 
-        public static ulong mul_ScalarTruncateAddUInt(Exp a,ulong scalar,ulong addend)
+        public static BigInteger mul_ScalarTruncateAddUInt(Exp a, BigInteger scalar, BigInteger addend)
         {
             Exp product = mul_(a, scalar);
             return add_(truncate(product), addend);
@@ -62,11 +62,11 @@ namespace Ctoken
             return value.mantissa == 0;
         }
 
-        /*public static ulong safe224(ulong n,string errorMessage)
+        /*public static BigInteger safe224(BigInteger n,string errorMessage)
         {
         }*/
 
-        /*public static ulong safe32(ulong n,string errorMessage)
+        /*public static BigInteger safe32(BigInteger n,string errorMessage)
         {
         }*/
 
@@ -77,21 +77,21 @@ namespace Ctoken
             return exp;
         }
 
-        public static Double add_(Double a,Double b)
+        public static AmountExp add_(AmountExp a, AmountExp b)
         {
-            Double doubleExp = new Double();
-            doubleExp.mantissa = add_(a.mantissa, b.mantissa);
-            return doubleExp;
+            AmountExp amountExp = new AmountExp();
+            amountExp.mantissa = add_(a.mantissa, b.mantissa);
+            return amountExp;
         }
 
-        public static ulong add_(ulong a,ulong b)
+        public static BigInteger add_(BigInteger a,BigInteger b)
         {
             return add_(a, b, "addition overflow");
         }
 
-        public static ulong add_(ulong a,ulong b,string errorMessage)
+        public static BigInteger add_(BigInteger a,BigInteger b,string errorMessage)
         {
-            ulong c = a + b;
+            BigInteger c = a + b;
             if(c < a)
             {
                 throw new Exception(errorMessage);
@@ -106,19 +106,19 @@ namespace Ctoken
             return exp;
         }
 
-        public static Double sub_(Double a,Double b)
+        public static AmountExp sub_(AmountExp a, AmountExp b)
         {
-            Double doubleExp = new Double();
+            AmountExp doubleExp = new AmountExp();
             doubleExp.mantissa = sub_(a.mantissa, b.mantissa);
             return doubleExp;
         }
 
-        public static ulong sub_(ulong a,ulong b)
+        public static BigInteger sub_(BigInteger a,BigInteger b)
         {
             return sub_(a, b, "subtraction underflow");
         }
 
-        public  static ulong sub_(ulong a,ulong b,string errorMessage)
+        public  static BigInteger sub_(BigInteger a,BigInteger b,string errorMessage)
         {
             if(b > a)
             {
@@ -134,49 +134,49 @@ namespace Ctoken
             return exp;
         }
 
-        public static Exp mul_(Exp a,ulong b)
+        public static Exp mul_(Exp a,BigInteger b)
         {
             Exp exp = new Exp();
             exp.mantissa = mul_(a.mantissa, b);
             return exp;
         }
 
-        public static ulong mul_(ulong a,Exp b)
+        public static BigInteger mul_(BigInteger a,Exp b)
         {
             return mul_(a, b.mantissa) / expScale;
         }
 
-        public static Double mul_(Double a,Double b)
+        public static AmountExp mul_(AmountExp a, AmountExp b)
         {
-            Double doubleExp = new Double();
+            AmountExp doubleExp = new AmountExp();
             doubleExp.mantissa = (mul_(a.mantissa, b.mantissa) / expScale)/expScale;
             return doubleExp;
         }
 
-        public static Double mul_(Double a,ulong b)
+        public static AmountExp mul_(AmountExp a,BigInteger b)
         {
-            Double doubleExp = new Double();
+            AmountExp doubleExp = new AmountExp();
             doubleExp.mantissa = mul_(a.mantissa, b);
             return doubleExp;
         }
 
-        public static ulong mul_(ulong a,Double b)
+        public static BigInteger mul_(BigInteger a, AmountExp b)
         {
             return (mul_(a, b.mantissa) / expScale) / expScale;
         }
 
-        public static ulong mul_(ulong a,ulong b)
+        public static BigInteger mul_(BigInteger a, BigInteger b)
         {
             return mul_(a, b, "multiplication overflow");
         }
 
-        public static ulong mul_(ulong a,ulong b,string errorMessage)
+        public static BigInteger mul_(BigInteger a, BigInteger b,string errorMessage)
         {
             if(a == 0 || b == 0)
             {
                 return 0;
             }
-            ulong c = a * b;
+            BigInteger c = a * b;
             if(c/a != b)
             {
                 throw new Exception(errorMessage);
@@ -191,43 +191,43 @@ namespace Ctoken
             return exp;
         }
 
-        public static Exp div_(Exp a,ulong b)
+        public static Exp div_(Exp a, BigInteger b)
         {
             Exp exp = new Exp();
             exp.mantissa = div_(a.mantissa, b);
             return exp;
         }
 
-        public static ulong div_(ulong a,Exp b)
+        public static BigInteger div_(BigInteger a,Exp b)
         {
             return div_(mul_(a, expScale), b.mantissa);
         }
 
-        public static Double div_(Double a,Double b)
+        public static AmountExp div_(AmountExp a, AmountExp b)
         {
-            Double doubleExp = new Double();
-            doubleExp.mantissa = div_(mul_(a.mantissa,doubleScale), b.mantissa);
+            AmountExp doubleExp = new AmountExp();
+            doubleExp.mantissa = div_(mul_(a.mantissa, amountScale), b.mantissa);
             return doubleExp;
         }
 
-        public static Double div_(Double a,ulong b)
+        public static AmountExp div_(AmountExp a, BigInteger b)
         {
-            Double doubleExp = new Double();
+            AmountExp doubleExp = new AmountExp();
             doubleExp.mantissa = div_(a.mantissa, b);
             return doubleExp;
         }
 
-        public static ulong div_(ulong a,Double b)
+        public static BigInteger div_(BigInteger a, AmountExp b)
         {
-            return div_(mul_(a, doubleScale), b.mantissa);
+            return div_(mul_(a, amountScale), b.mantissa);
         }
 
-        public static ulong div_(ulong a,ulong b)
+        public static BigInteger div_(BigInteger a, BigInteger b)
         {
             return div_(a, b, "divided by zero");
         }
 
-        public static ulong div_(ulong a,ulong b,string errorMessage)
+        public static BigInteger div_(BigInteger a, BigInteger b, string errorMessage)
         {
             if(b <= 0)
             {
@@ -236,10 +236,10 @@ namespace Ctoken
             return a / b;
         }
 
-        public static Double fraction(ulong a,ulong b)
+        public static AmountExp fraction(BigInteger a, BigInteger b)
         {
-            Double doubleExp = new Double();
-            doubleExp.mantissa = div_(mul_(a, doubleScale), b);
+            AmountExp doubleExp = new AmountExp();
+            doubleExp.mantissa = div_(mul_(a, amountScale), b);
             return doubleExp;
         }
     }

@@ -29,13 +29,13 @@ namespace comptroller
         public static event Action<UInt160,UInt160> MarketExited;
 
         [DisplayName("NewCloseFactor")]
-        public static event Action<ulong, ulong> NewCloseFactor;
+        public static event Action<BigInteger, BigInteger> NewCloseFactor;
 
         [DisplayName("NewCollateralFactor")]
-        public static event Action<UInt160,ulong,ulong> NewCollateralFactor;
+        public static event Action<UInt160, BigInteger, BigInteger> NewCollateralFactor;
 
         [DisplayName("NewLiquidationIncentive")]
-        public static event Action<ulong, ulong> NewLiquidationIncentive;
+        public static event Action<BigInteger, BigInteger> NewLiquidationIncentive;
 
         [DisplayName("NewBorrowCap")]
         public static event Action<UInt160, BigInteger> NewBorrowCap;
@@ -418,11 +418,11 @@ namespace comptroller
             public BigInteger sumBorrowPlusEffects;
             public BigInteger cTokenBalance;
             public BigInteger borrowBalance;
-            public ulong exchangeRateMantissa;
-            public ulong oraclePriceMantissa;
+            public BigInteger exchangeRateMantissa;
+            public BigInteger oraclePriceMantissa;
             //Exp
-            public ulong collateralFactor;
-            public ulong exchangeRate;
+            public BigInteger collateralFactor;
+            public BigInteger exchangeRate;
             public BigInteger oraclePrice;
             public BigInteger tokensToDenom;
         }
@@ -459,7 +459,7 @@ namespace comptroller
             {
                 UInt160 asset = assets[i];
                 Object AccountSnapshotObj = Contract.Call(cTokenModify, "getAccountSnapshot", CallFlags.All, new object[] { account });
-                (int, BigInteger, BigInteger, ulong) accountSnapshot = ((int, BigInteger, BigInteger, ulong))AccountSnapshotObj;
+                (int, BigInteger, BigInteger, BigInteger) accountSnapshot = ((int, BigInteger, BigInteger, BigInteger))AccountSnapshotObj;
                 int err = accountSnapshot.Item1;
                 if (err != (int)ErrorReporter.Error.NO_ERROR)
                 {
@@ -479,7 +479,9 @@ namespace comptroller
                     return ((int)ErrorReporter.Error.PRICE_ERROR, 0, 0);
                 }
                 vars.oraclePrice = vars.oraclePriceMantissa;
-                vars.tokensToDenom = vars.collateralFactor * vars.exchangeRate * vars.oraclePrice / (carry*carry);
+                vars.tokensToDenom = vars.collateralFactor * vars.exchangeRate * vars.oraclePrice / (Ten2Power18* Ten2Power18);
+
+
                 vars.sumCollateral += vars.tokensToDenom * vars.cTokenBalance;
                 vars.sumBorrowPlusEffects += vars.oraclePrice* vars.borrowBalance;
                 if(asset == cTokenModify)
@@ -490,11 +492,11 @@ namespace comptroller
             }
             if (vars.sumCollateral > vars.sumBorrowPlusEffects)
             {
-                return ((int)ErrorReporter.Error.NO_ERROR, vars.sumCollateral - vars.sumBorrowPlusEffects, 0);
+                return ((int)ErrorReporter.Error.NO_ERROR, (vars.sumCollateral - vars.sumBorrowPlusEffects) / Ten2Power8, 0);
             }
             else
             {
-                return ((int)ErrorReporter.Error.NO_ERROR, 0, vars.sumBorrowPlusEffects - vars.sumCollateral);
+                return ((int)ErrorReporter.Error.NO_ERROR, 0, (vars.sumBorrowPlusEffects - vars.sumCollateral) / Ten2Power8);
             }
 
 
@@ -510,18 +512,18 @@ namespace comptroller
         /// <returns>(errorCode, number of cTokenCollateral tokens to be seized in a liquidation)</returns>
         public static (int, BigInteger) liquidateCalculateSeizeTokens(UInt160 cTokenBorrowed, UInt160 cTokenCollateral, BigInteger actualRepayAmount)
         {
-            ulong priceBorrowedMantissa = PriceOracle.getUnderlyingPrice(cTokenBorrowed);
-            ulong priceCollateralMantissa = PriceOracle.getUnderlyingPrice(cTokenCollateral);
+            BigInteger priceBorrowedMantissa = PriceOracle.getUnderlyingPrice(cTokenBorrowed);
+            BigInteger priceCollateralMantissa = PriceOracle.getUnderlyingPrice(cTokenCollateral);
             if (priceBorrowedMantissa == 0 || priceCollateralMantissa == 0)
             {
                 return ((int)ErrorReporter.Error.PRICE_ERROR, 0);
             }
             Object exchangeRateMantissaObj = Contract.Call(cTokenCollateral, "exchangeRateStored", CallFlags.All, new object[] {});
-            ulong exchangeRateMantissa = (ulong)exchangeRateMantissaObj;
-            ulong numerator = LiquidationIncentiveMantissa.Get() * priceBorrowedMantissa;
-            ulong denominator = priceCollateralMantissa * exchangeRateMantissa;
-            ulong ratio = (numerator * carry) / denominator;
-            BigInteger seizeTokens = (ratio * actualRepayAmount)/carry;
+            BigInteger exchangeRateMantissa = (BigInteger)exchangeRateMantissaObj;
+            BigInteger numerator = LiquidationIncentiveMantissa.Get() * priceBorrowedMantissa/Ten2Power18;
+            BigInteger denominator = priceCollateralMantissa * exchangeRateMantissa/Ten2Power18;
+            BigInteger ratio = (numerator * Ten2Power18) / denominator;
+            BigInteger seizeTokens = (ratio * actualRepayAmount)/ Ten2Power18;
             return ((int)ErrorReporter.Error.NO_ERROR, seizeTokens);
         }
 

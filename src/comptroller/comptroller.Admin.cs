@@ -14,7 +14,7 @@ namespace comptroller
     {
 
         /*** Admin Functions ***/
-        public static int setCollateralFactor(UInt160 cToken, ulong newCollateralFactorMantissa)
+        public static int setCollateralFactor(UInt160 cToken, BigInteger newCollateralFactorMantissa)
         {
 
             // Verify market is listed
@@ -35,7 +35,7 @@ namespace comptroller
             }
 
             // Set market's collateral factor to new collateral factor, remember old value
-            ulong oldCollateralFactorMantissa = market.collateralFactorMantissa;
+            BigInteger oldCollateralFactorMantissa = market.collateralFactorMantissa;
             market.collateralFactorMantissa = newCollateralFactorMantissa;
             markets.Put(cToken, market);
             NewCollateralFactor(cToken, oldCollateralFactorMantissa, newCollateralFactorMantissa);
@@ -43,7 +43,7 @@ namespace comptroller
         }
 
 
-        public static ulong getCollateralFactor(UInt160 cToken)
+        public static BigInteger getCollateralFactor(UInt160 cToken)
         {
             Market market = markets.Get(cToken);
             if (!market.isListed) throw new Exception("market is not listed");
@@ -58,7 +58,7 @@ namespace comptroller
 
 
             // Save current value for use in log
-            ulong oldLiquidationIncentiveMantissa = LiquidationIncentiveMantissa.Get();
+            BigInteger oldLiquidationIncentiveMantissa = LiquidationIncentiveMantissa.Get();
 
             // Set liquidation incentive to new incentive
             LiquidationIncentiveMantissa.Put(newLiquidationIncentiveMantissa);
@@ -69,12 +69,12 @@ namespace comptroller
         }
 
 
-        public static int setCloseFactor(ulong newCloseFactorMantissa)
+        public static int setCloseFactor(BigInteger newCloseFactorMantissa)
         {
 
 
             // Save current value for use in log
-            ulong oldCloseFactorMantissa = CloseFactorMantissa.Get();
+            BigInteger oldCloseFactorMantissa = CloseFactorMantissa.Get();
 
 
 
@@ -147,7 +147,7 @@ namespace comptroller
         }
 
 
-        public static void putMarketIsList(UInt160 cToken, ulong collateralFactorMantissa)
+        public static void putMarketIsList(UInt160 cToken, BigInteger collateralFactorMantissa)
         {
             
 

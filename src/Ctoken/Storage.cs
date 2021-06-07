@@ -106,19 +106,19 @@ namespace Ctoken
 
         public struct AccountSnapshot
         {
-            public uint reservesFactorMantissa;
-            public uint initialExchangeRateMantissa;
-            public uint accrualBlockNumber;
-            public ulong borrowIndex;
-            public uint totalBorrows;
-            public uint totalReserves;
-            public uint totalSupply;
+            public BigInteger reservesFactorMantissa;
+            public BigInteger initialExchangeRateMantissa;
+            public BigInteger accrualBlockNumber;
+            public BigInteger borrowIndex;
+            public BigInteger totalBorrows;
+            public BigInteger totalReserves;
+            public BigInteger totalSupply;
             public bool _notEntered;
             public string name;
             public string symbol;
-            public ulong decimals;
-            public ulong borrowRateMaxMantissa;
-            public ulong reservesFactorMaxMantissa;
+            public BigInteger decimals;
+            public BigInteger borrowRateMaxMantissa;
+            public BigInteger reservesFactorMaxMantissa;
         }
 
         public struct AdminSnapshot

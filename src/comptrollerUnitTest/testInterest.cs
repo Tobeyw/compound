@@ -165,7 +165,15 @@ namespace Neo.SmartContract.Framework.UnitTests.Services
             //utilizationRate
 
             engine.Reset();
-            var stack = engine.ExecuteTestCaseStandard("utilizationRate", 40000000, 10000000, 5000000);
+            var stack = engine.ExecuteTestCaseStandard("putInterestModel", 50000000000000000, 60000000000000000, 40000000000000000, 500000000000000000);
+            Assert.AreEqual(VMState.HALT, engine.State);
+
+
+
+            //utilizationRate
+
+            engine.Reset();
+            stack = engine.ExecuteTestCaseStandard("utilizationRate", 40000000, 10000000, 5000000);
             //Assert.AreEqual(VMState.HALT, engine.State);
             Assert.AreEqual(stack.Pop(), 222222222222222222);
 
@@ -174,10 +182,6 @@ namespace Neo.SmartContract.Framework.UnitTests.Services
             //Assert.AreEqual(VMState.HALT, engine.State);
             Assert.AreEqual(stack.Pop(), 0);
 
-            engine.Reset();
-            stack = engine.ExecuteTestCaseStandard("utilizationRate", 0, 0, 0);
-            Assert.AreEqual(VMState.HALT, engine.State);
-            Assert.AreEqual(stack.Pop(), 0);
 
             engine.Reset();
             stack = engine.ExecuteTestCaseStandard("utilizationRate", 40000000, 10000000, 10000000000);
