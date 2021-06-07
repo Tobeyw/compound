@@ -62,6 +62,9 @@ namespace comptroller
         private static ulong carry = 100_000_000;
         #endregion
 
+
+        private static readonly BigInteger Ten2Power8 = 100000000; // price or amount decimal = 10^8
+        private static readonly BigInteger Ten2Power18 = 1000000000000000000; // value decimal = 10 ^ 18
         public static Boolean isComptroller() => true;
 
         /// <summary>

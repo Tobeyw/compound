@@ -68,6 +68,8 @@ namespace Ctoken
             return 0;
         }
 
+        private static readonly BigInteger Ten2Power8 = 100000000; // price or amount decimal = 10^8
+        private static readonly BigInteger Ten2Power18 = 1000000000000000000; // value decimal = 10 ^ 18
         #region Notidicaitons
 
         [DisplayName("Transfer")]

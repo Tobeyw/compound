@@ -17,7 +17,7 @@ using System.Collections.Generic;
 namespace Neo.SmartContract.Framework.UnitTests.Services
 {
     [TestClass]
-    public class testCtoken
+    public class testInterest
     {
 
         private TestEngine _engine;
@@ -79,7 +79,7 @@ namespace Neo.SmartContract.Framework.UnitTests.Services
                     }
 
             });
-            string path = "../../../../CToken/";
+            string path = "../../../../InterestModelV1/";
 
             string[] files = Directory.GetFiles(path, "*.cs");
 
@@ -149,7 +149,7 @@ namespace Neo.SmartContract.Framework.UnitTests.Services
                }
 
             });
-            string path = "../../../../CToken/";
+            string path = "../../../../InterestModelV1/";
 
             string[] files = Directory.GetFiles(path, "*.cs");
 
@@ -162,15 +162,26 @@ namespace Neo.SmartContract.Framework.UnitTests.Services
                 Manifest = ContractManifest.FromJson(_engine.Manifest),
             });
 
-            //putMarketIsList
+            //utilizationRate
+
             engine.Reset();
-            UInt160 asset1 = "NajuJa8fyvFrT9dAnu3QmoFSNZFWJbAa8p".ToScriptHash(ProtocolSettings.Default.AddressVersion);
-            UInt160 asset2 = "NNdT88fL6YRjZYc6B3sAx5vwA5T4Bidi6p".ToScriptHash(ProtocolSettings.Default.AddressVersion);
-            UInt160 tourist = "NQXmjb22aHYo2Hph8vzw7d7eiwbnwNvqEL".ToScriptHash(ProtocolSettings.Default.AddressVersion);
+            var stack = engine.ExecuteTestCaseStandard("utilizationRate", 40000000, 10000000, 5000000);
+            //Assert.AreEqual(VMState.HALT, engine.State);
+            Assert.AreEqual(stack.Pop(), 222222222222222222);
+
             engine.Reset();
-            var stack = engine.ExecuteTestCaseStandard("initialize", 5000,"name","symbol",500);
+            stack = engine.ExecuteTestCaseStandard("utilizationRate", 40000000, 0, 5000000);
             //Assert.AreEqual(VMState.HALT, engine.State);
             Assert.AreEqual(stack.Pop(), 0);
+
+            engine.Reset();
+            stack = engine.ExecuteTestCaseStandard("utilizationRate", 0, 0, 0);
+            Assert.AreEqual(VMState.HALT, engine.State);
+            Assert.AreEqual(stack.Pop(), 0);
+
+            engine.Reset();
+            stack = engine.ExecuteTestCaseStandard("utilizationRate", 40000000, 10000000, 10000000000);
+            Assert.AreEqual(VMState.FAULT, engine.State);
 
 
 
