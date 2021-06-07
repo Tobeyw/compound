@@ -6,7 +6,7 @@ using Neo.SmartContract.Framework.Services;
 using System;
 
 using System.ComponentModel;
-
+using System.Numerics;
 
 namespace Ctoken
 {
@@ -110,6 +110,9 @@ namespace Ctoken
         [DisplayName("NewReserveFactor")]
         public static event Action<ulong, ulong> OnNewReserveFactor;
 
+        [DisplayName("OnNewComptroller")]
+        public static event Action<UInt160, UInt160> OnNewComptroller;
+
         //[DisplayName("NewMarketIntrerstRateModel")]
         //public static event Action<InterestRateModelInterface, InterestRateModelInterface> OnNewMarketInterestRateModel;
         #endregion
@@ -119,7 +122,7 @@ namespace Ctoken
 
 
 
-        public static int transferTokens(UInt160 spender, UInt160 src, UInt160 dst, uint tokens)
+        public static BigInteger transferTokens(UInt160 spender, UInt160 src, UInt160 dst, uint tokens)
         {
 /*            uint allowed = (uint)comptroller.comptroller.transferAllowed(spender, src, dst, tokens);
             if (allowed != 0)
@@ -132,14 +135,14 @@ namespace Ctoken
                 return (int)fail(Error.BAD_INPUT, FailureInfo.TRANSFER_NOT_ALLOWED);
             }
 
-            int startingAllowance = 0;
+            BigInteger startingAllowance = 0;
             if (spender == src)
             {
                 startingAllowance = -1;
             }
             else
             {
-                Map<UInt160, int> map = transferAllowance.Get(src);
+                Map<UInt160, BigInteger> map = transferAllowance.Get(src);
                 startingAllowance = map[spender];
             }
 
@@ -169,8 +172,8 @@ namespace Ctoken
 
             if (startingAllowance != -1)
             {
-                Map<UInt160, int> getAccount = transferAllowance.Get(src);
-                getAccount[spender] = (int)allowanceNew;
+                Map<UInt160, BigInteger> getAccount = transferAllowance.Get(src);
+                getAccount[spender] = (BigInteger)allowanceNew;
             }
             OnTransfer(src, dst, tokens);
             return (int)Error.NO_ERROR;
@@ -194,24 +197,24 @@ namespace Ctoken
         {
             Transaction tx = (Transaction)Runtime.ScriptContainer;
             UInt160 src = tx.Sender;
-            Map<UInt160, int> map = transferAllowance.Get(src);
-            map[spender] = (int)amount;
+            Map<UInt160, BigInteger> map = transferAllowance.Get(src);
+            map[spender] = (BigInteger)amount;
             OnApproval(src, spender, amount);
             return true;
         }
 
-        public static int allowance(UInt160 owner, UInt160 spender)
+        public static BigInteger allowance(UInt160 owner, UInt160 spender)
         {
-            Map<UInt160, int> map = transferAllowance.Get(owner);
+            Map<UInt160, BigInteger> map = transferAllowance.Get(owner);
             return map[spender];
         }
 
-        public static int balanceOf(UInt160 owner)
+        public static BigInteger balanceOf(UInt160 owner)
         {
-            return (int)accountTokens.Get(owner);
+            return accountTokens.Get(owner);
         }
 
-        public static int balanceOfUnderlying(UInt160 owner)
+        public static BigInteger balanceOfUnderlying(UInt160 owner)
         {
             Exp exchangeRate = new Exp();
             exchangeRate.mantissa = exchangeRateCurrent();
@@ -220,7 +223,7 @@ namespace Ctoken
             {
                 throw new Exception("balance could not be calculated");
             }
-            return (int)balance;
+            return (BigInteger)balance;
         }
 
         public static (uint, uint, uint, uint) getAccountSnapshot(UInt160 account)
@@ -454,13 +457,13 @@ namespace Ctoken
             return (uint)Error.NO_ERROR;
         }
 
-/*        public static (uint, uint) mintInternal(uint mintAmount)
+        public static (uint, uint) mintInternal(uint mintAmount)
         {
-*//*            uint error = accrueInterest();
+            uint error = accrueInterest();
             if (error != (uint)(Error.NO_ERROR))
             {
                 return (fail((Error)error, FailureInfo.MINT_ACCRUE_INTEREST_FAILED), 0);
-            }*//*
+            }
             Transaction tx = (Transaction)Runtime.ScriptContainer;
             UInt160 sender = tx.Sender;
             return mintFresh(sender, mintAmount);
@@ -480,12 +483,15 @@ namespace Ctoken
         public static (uint, uint) mintFresh(UInt160 minter, uint mintAmount)
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            *//*uint allowed = (uint)comptroller.comptroller.mintAllowed(Runtime.ExecutingScriptHash, minter, mintAmount);
+            UInt160 theToken = Runtime.ExecutingScriptHash;
+            UInt160 comptroller = getComptroller();
+            Object allowedObj = Contract.Call(comptroller, "mintAllowed", CallFlags.All, new object[] { theToken,minter,mintAmount });
+            int allowed = (int)allowedObj;
             if (allowed != 0)
             {
                 return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.MINT_COMPTROLLER_REJECTION, (int)allowed), 0);
             }
-*//*
+
             if (accSnapshot.accrualBlockNumber != getBlockNumber())
             {
                 return (fail(Error.MARKET_NOT_FRESH, FailureInfo.MINT_FRESHNESS_CHECK), 0);
@@ -539,7 +545,7 @@ namespace Ctoken
             return ((uint)Error.NO_ERROR, vars.actualMintAmount);
         }
 
-        public static uint redeemInternal(uint redeeemTokens)
+        /*public static uint redeemInternal(uint redeeemTokens)
         {
             uint error = accrueInterest();
             if (error != (uint)Error.NO_ERROR)
@@ -617,11 +623,11 @@ namespace Ctoken
                 vars.redeemAmount = redeemAmountIn;
             }
 
-            *//*uint allowed = (uint)comptroller.comptroller.redeemAllowed(Runtime.ExecutingScriptHash, redeemer, vars.redeemTokens);
+            uint allowed = (uint)comptroller.comptroller.redeemAllowed(Runtime.ExecutingScriptHash, redeemer, vars.redeemTokens);
             if (allowed != 0)
             {
                 return failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.REDEEM_COMPTROLLER_REJECTION, (int)allowed);
-            }*//*
+            }
             if (accSnapshot.accrualBlockNumber != getBlockNumber())
             {
                 return fail(Error.MARKET_NOT_FRESH, FailureInfo.REDEEM_FRESHNESS_CHECK);
@@ -682,11 +688,11 @@ namespace Ctoken
         public static uint borrowFresh(UInt160 borrower, uint borrowAmount)
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            *//*uint allowed = (uint)comptroller.comptroller.borrowAllowed(Runtime.ExecutingScriptHash, borrower, borrowAmount);
+            uint allowed = (uint)comptroller.comptroller.borrowAllowed(Runtime.ExecutingScriptHash, borrower, borrowAmount);
             if (allowed != 0)
             {
                 return failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.BORROW_COMPTROLLER_REJECTION, (int)allowed);
-            }*//*
+            }
 
             if (accSnapshot.accrualBlockNumber != getBlockNumber())
             {
@@ -772,11 +778,11 @@ namespace Ctoken
         public static (uint, uint) repayBorrowFresh(UInt160 payer, UInt160 borrower, uint repayAmount)
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            *//*uint allowed = (uint)comptroller.comptroller.repayBorrowAllowed(Runtime.ExecutingScriptHash, payer, borrower, repayAmount);
+            uint allowed = (uint)comptroller.comptroller.repayBorrowAllowed(Runtime.ExecutingScriptHash, payer, borrower, repayAmount);
             if (allowed != 0)
             {
                 return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.REPAY_BORROW_COMPTROLLER_REJECTION, (int)allowed), 0);
-            }*//*
+            }
 
             if (accSnapshot.accrualBlockNumber != getBlockNumber())
             {
@@ -829,87 +835,87 @@ namespace Ctoken
             return ((uint)Error.NO_ERROR, vars.actualRepayAmount);
         }
 
-        //public static (uint, uint) liquidateBorrowInternal(UInt160 borrower, uint repayAmount, CtokenInterface cTokenCollateral)
-        //{
-        //    uint error = accrueInterest();
-        //    if (error != (uint)Error.NO_ERROR)
-        //    {
-        //        return (fail((Error)error, FailureInfo.LIQUIDATE_ACCRUE_BORROW_INTEREST_FAILED), 0);
-        //    }
+        public static (uint, uint) liquidateBorrowInternal(UInt160 borrower, uint repayAmount, CtokenInterface cTokenCollateral)
+        {
+            uint error = accrueInterest();
+            if (error != (uint)Error.NO_ERROR)
+            {
+                return (fail((Error)error, FailureInfo.LIQUIDATE_ACCRUE_BORROW_INTEREST_FAILED), 0);
+            }
 
-        //    error = (uint)accrueInterest();
-        //    if (error != (uint)Error.NO_ERROR)
-        //    {
-        //        return (fail((Error)error, FailureInfo.LIQUIDATE_ACCRUE_COLLATERAL_INTEREST_FAILED), 0);
-        //    }
+            error = (uint)accrueInterest();
+            if (error != (uint)Error.NO_ERROR)
+            {
+                return (fail((Error)error, FailureInfo.LIQUIDATE_ACCRUE_COLLATERAL_INTEREST_FAILED), 0);
+            }
 
-        //    Transaction tx = (Transaction)Runtime.ScriptContainer;
-        //    UInt160 sender = tx.Sender;
-        //    return liquidateBorrowFresh(sender, borrower, repayAmount, cTokenCollateral);
-        //}
+            Transaction tx = (Transaction)Runtime.ScriptContainer;
+            UInt160 sender = tx.Sender;
+            return liquidateBorrowFresh(sender, borrower, repayAmount, cTokenCollateral);
+        }
 
-        //public static (uint, uint) liquidateBorrowFresh(UInt160 liquidator, UInt160 borrower, uint repayAmount, CtokenInterface cTokenCollateral)
-        //{
-        //    //uint allowed = liquidateBorrowAllowed(Runtime.ExecutingScriptHash, cTokenCollateral, liquidator, borrower, repayAmount);
-        //    //if (allowed != 0)
-        //    //{
-        //    //    return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.LIQUIDATE_COMPTROLLER_REJECTION, (int)allowed), 0);
-        //    //}
+        public static (uint, uint) liquidateBorrowFresh(UInt160 liquidator, UInt160 borrower, uint repayAmount, CtokenInterface cTokenCollateral)
+        {
+            uint allowed = liquidateBorrowAllowed(Runtime.ExecutingScriptHash, cTokenCollateral, liquidator, borrower, repayAmount);
+            if (allowed != 0)
+            {
+                return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.LIQUIDATE_COMPTROLLER_REJECTION, (int)allowed), 0);
+            }
 
-        //    if (accrualBlockNumber != getBlockNumber())
-        //    {
-        //        return (fail(Error.MARKET_NOT_FRESH, FailureInfo.LIQUIDATE_FRESHNESS_CHECK), 0);
-        //    }
+            if (accrualBlockNumber != getBlockNumber())
+            {
+                return (fail(Error.MARKET_NOT_FRESH, FailureInfo.LIQUIDATE_FRESHNESS_CHECK), 0);
+            }
 
-        //    if (borrower == liquidator)
-        //    {
-        //        return (fail(Error.INVALID_ACCOUNT_PAIR, FailureInfo.LIQUIDATE_LIQUIDATOR_IS_BORROWER), 0);
-        //    }
+            if (borrower == liquidator)
+            {
+                return (fail(Error.INVALID_ACCOUNT_PAIR, FailureInfo.LIQUIDATE_LIQUIDATOR_IS_BORROWER), 0);
+            }
 
-        //    if (repayAmount == 0)
-        //    {
-        //        return (fail(Error.INVALID_CLOSE_AMOUNT_REQUESTED, FailureInfo.LIQUIDATE_CLOSE_AMOUNT_IS_ZERO), 0);
-        //    }
+            if (repayAmount == 0)
+            {
+                return (fail(Error.INVALID_CLOSE_AMOUNT_REQUESTED, FailureInfo.LIQUIDATE_CLOSE_AMOUNT_IS_ZERO), 0);
+            }
 
-        //    if ((int)repayAmount == -1)
-        //    {
-        //        return (fail(Error.INVALID_CLOSE_AMOUNT_REQUESTED, FailureInfo.LIQUIDATE_CLOSE_AMOUNT_IS_UINT_MAX), 0);
-        //    }
+            if ((int)repayAmount == -1)
+            {
+                return (fail(Error.INVALID_CLOSE_AMOUNT_REQUESTED, FailureInfo.LIQUIDATE_CLOSE_AMOUNT_IS_UINT_MAX), 0);
+            }
 
-        //    (uint repayBorrowError, uint actualRepayAmount) = repayBorrowFresh(liquidator, borrower, repayAmount);
-        //    if (repayBorrowError != (uint)Error.NO_ERROR)
-        //    {
-        //        return (fail((Error)repayBorrowError, FailureInfo.LIQUIDATE_REPAY_BORROW_FRESH_FAILED), 0);
-        //    }
+            (uint repayBorrowError, uint actualRepayAmount) = repayBorrowFresh(liquidator, borrower, repayAmount);
+            if (repayBorrowError != (uint)Error.NO_ERROR)
+            {
+                return (fail((Error)repayBorrowError, FailureInfo.LIQUIDATE_REPAY_BORROW_FRESH_FAILED), 0);
+            }
 
-        //    (uint amountSeizeError, uint seizeTokens) = Comptroller.liquidateCalculateSeizeTokens(Runtime.ExecutingScriptHash, cTokenCollateral, actualRepayAmount);
-        //    if (amountSeizeError != (uint)Error.NO_ERROR)
-        //    {
-        //        throw new Exception("LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED");
-        //    }
-        //    if (balanceOf(borrower) < seizeTokens)
-        //    {
-        //        throw new Exception("LIQUIDATE_SEIZE_TOO_MUCH");
-        //    }
+            (uint amountSeizeError, uint seizeTokens) = Comptroller.liquidateCalculateSeizeTokens(Runtime.ExecutingScriptHash, cTokenCollateral, actualRepayAmount);
+            if (amountSeizeError != (uint)Error.NO_ERROR)
+            {
+                throw new Exception("LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED");
+            }
+            if (balanceOf(borrower) < seizeTokens)
+            {
+                throw new Exception("LIQUIDATE_SEIZE_TOO_MUCH");
+            }
 
-        //    uint seizeError;
-        //    if (cTokenCollateral == Runtime.ExecutingScriptHash)
-        //    {
-        //        seizeError = seizeInternal(Runtime.ExecutingScriptHash, liquidator, borrower, seizeTokens);
-        //    }
-        //    else
-        //    {
-        //        seizeError = seize(liquidator, borrower, seizeTokens);
-        //    }
+            uint seizeError;
+            if (cTokenCollateral == Runtime.ExecutingScriptHash)
+            {
+                seizeError = seizeInternal(Runtime.ExecutingScriptHash, liquidator, borrower, seizeTokens);
+            }
+            else
+            {
+                seizeError = seize(liquidator, borrower, seizeTokens);
+            }
 
-        //    if (seizeError != (uint)Error.NO_ERROR)
-        //    {
-        //        throw new Exception("token seizure failed");
-        //    }
-        //    OnLiquidateBorrow(liquidator, borrower, actualRepayAmount, cTokenCollateral, seizeTokens);
+            if (seizeError != (uint)Error.NO_ERROR)
+            {
+                throw new Exception("token seizure failed");
+            }
+            OnLiquidateBorrow(liquidator, borrower, actualRepayAmount, cTokenCollateral, seizeTokens);
 
-        //    return ((uint)Error.NO_ERROR, actualRepayAmount);
-        //}
+            return ((uint)Error.NO_ERROR, actualRepayAmount);
+        }
 
         public static uint seize(UInt160 liquidator, UInt160 borrower, uint seizeTokens)
         {
@@ -920,11 +926,11 @@ namespace Ctoken
 
         public static uint seizeInternal(UInt160 seizerToken, UInt160 liquidator, UInt160 borrower, uint seizeTokens)
         {
-            //uint allowed = seizeAllowed(Runtime.ExecutingScriptHash, seizerToken, liquidator, borrower, seizeTokens);
-            //if (allowed != 0)
-            //{
-            //    return failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.LIQUIDATE_SEIZE_COMPTROLLER_REJECTION, (int)allowed);
-            //}
+            uint allowed = seizeAllowed(Runtime.ExecutingScriptHash, seizerToken, liquidator, borrower, seizeTokens);
+            if (allowed != 0)
+            {
+                return failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.LIQUIDATE_SEIZE_COMPTROLLER_REJECTION, (int)allowed);
+            }
             if (borrower == liquidator)
             {
                 return fail(Error.INVALID_ACCOUNT_PAIR, FailureInfo.LIQUIDATE_SEIZE_LIQUIDATOR_IS_BORROWER);
@@ -953,7 +959,7 @@ namespace Ctoken
 
             return (uint)Error.NO_ERROR;
         }
-*/
+
         public static uint setPendingAdmin(UInt160 newPendingAdmin)
         {
             AdminSnapshot adminSnapshot = defaultAdmin.Get();
@@ -996,26 +1002,7 @@ namespace Ctoken
             return (uint)Error.NO_ERROR;
         }
 
-        //public static uint _setComptroller()
-        //{
-        //    AdminSnapshot adminSnapshot = defaultAdmin.Get();
-        //    Transaction tx = (Transaction)Runtime.ScriptContainer;
-        //    UInt160 sender = tx.Sender;
-
-        //    if (sender != adminSnapshot.admin)
-        //    {
-        //        return fail(Error.UNAUTHORIZED, FailureInfo.SET_COMPTROLLER_OWNER_CHECK);
-        //    }
-        //    ComptrollerInterface oldComptroller = comptroller;
-        //    if (!newComptroller.isComptroller())
-        //    {
-        //        throw new Exception("marker method returned false");
-        //    }
-        //    comptroller = newComptroller;
-        //    OnNewComptroller(oldComptroller, newComptroller);
-
-        //    return (uint)Error.NO_ERROR;
-        //}
+        
 
         public static uint setReserveFactor(uint newReserveFactorMantissa)
         {
@@ -1189,6 +1176,50 @@ namespace Ctoken
 
             return (uint)Error.NO_ERROR;
         }
+*/
+
+        public static uint setComptroller(UInt160 comptroller)
+        {
+            AdminSnapshot adminSnapshot = defaultAdmin.Get();
+            Transaction tx = (Transaction)Runtime.ScriptContainer;
+            UInt160 sender = tx.Sender;
+
+            if (sender != adminSnapshot.admin)
+            {
+                return fail(Error.UNAUTHORIZED, FailureInfo.SET_COMPTROLLER_OWNER_CHECK);
+            }
+
+            Object isComptrollerObj = Contract.Call(comptroller, "isComptroller", CallFlags.All, new object[] {});
+            Boolean isComptroller = (Boolean)isComptrollerObj;
+            if (!isComptroller)
+            {
+                throw new Exception("marker method returned false");
+            }
+
+            Storage.Put(Storage.CurrentContext, "comptroller", comptroller);
+            if(Storage.Get(Storage.CurrentContext, "comptroller") == null)
+            {
+                OnNewComptroller(null, comptroller);
+            }
+            else
+            {
+                UInt160 oldComptroller = (UInt160)Storage.Get(Storage.CurrentContext, "comptroller");
+                OnNewComptroller(oldComptroller, comptroller);
+
+            }
+            
+
+            return (uint)Error.NO_ERROR;
+        }
+        public static UInt160 getComptroller()
+        {
+            if (Storage.Get(Storage.CurrentContext, "comptroller")==null) throw new Exception("There is no comptroller");
+            return (UInt160)Storage.Get(Storage.CurrentContext, "comptroller");
+        }
+
+
+
+
 
         public static uint getCashPrior()
         {

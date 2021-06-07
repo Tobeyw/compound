@@ -37,17 +37,17 @@ namespace Ctoken
         {
             public static StorageMap transferAllowanceMap = new StorageMap(Storage.CurrentContext, "transferAllowance");
 
-            public static void Put(UInt160 account,Map<UInt160,int> signalAllowance)
+            public static void Put(UInt160 account,Map<UInt160, BigInteger> signalAllowance)
             {
                 string allowanceJson = StdLib.Serialize(signalAllowance);
                 transferAllowanceMap.Put(account, allowanceJson);
             }
 
-            public static Map<UInt160,int> Get(UInt160 account)
+            public static Map<UInt160, BigInteger> Get(UInt160 account)
             {
                 string allowanceJson = transferAllowanceMap.Get(account);
                 Object result = StdLib.Deserialize(allowanceJson);
-                Map<UInt160,int> resultReturn = (Map<UInt160,int>)result;
+                Map<UInt160, BigInteger> resultReturn = (Map<UInt160, BigInteger>)result;
                 return resultReturn;
             }
         }
