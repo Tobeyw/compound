@@ -45,6 +45,7 @@ namespace Ctoken
 
             public static Map<UInt160, BigInteger> Get(UInt160 account)
             {
+                if (transferAllowanceMap.Get(account) == null) throw new Exception("Can't find transferAllowance");
                 string allowanceJson = transferAllowanceMap.Get(account);
                 Object result = StdLib.Deserialize(allowanceJson);
                 Map<UInt160, BigInteger> resultReturn = (Map<UInt160, BigInteger>)result;
@@ -190,6 +191,7 @@ namespace Ctoken
             }
             public static BorrowSnapshot Get(UInt160 account)
             {
+                if (accountBorowsMap.Get(account) == null) throw new Exception("there is no BorrowSnapshot of this account");
                 string snapshot = accountBorowsMap.Get(account);
                 Object borrowsnapshot = StdLib.Deserialize(snapshot);
                 BorrowSnapshot result = (BorrowSnapshot)borrowsnapshot;
@@ -213,6 +215,7 @@ namespace Ctoken
 
             public static UInt160 Get()
             {
+                if (InterestModelMap.Get(key) == null) throw new Exception("please initial the InterestModel first");
                 UInt160 address = (UInt160)InterestModelMap.Get(key);
                 object isInterestModelObj = Contract.Call(address, "isInterestModel", CallFlags.All, new object[] { });
                 if (!(bool)isInterestModelObj) throw new Exception("This is not a InterestModel");

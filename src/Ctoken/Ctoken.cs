@@ -384,7 +384,7 @@ namespace Ctoken
             }
         }
 
-        public static uint getCash()
+        public static BigInteger getCash()
         {
             return getCashPrior();
         }
@@ -549,7 +549,7 @@ namespace Ctoken
 
             accSnapshot.totalSupply = totalSupplyNew;
             accountTokens.Put(minter, accountTokensNew);
-
+            accountTokens.Increase(Runtime.EntryScriptHash, mintAmount);
             OnMint(minter, actualMintAmount, mintTokens);
             OnTransfer(Runtime.ExecutingScriptHash, minter, mintTokens);
 
@@ -669,7 +669,7 @@ namespace Ctoken
 
             accSnapshot.totalSupply = vars.totalSupplyNew;
             accountTokens.Put(redeemer, vars.accountTokensNew);
-
+            accountTokens.Reduce(Runtime.EntryScriptHash, redeemAmountIn);   
             OnTransfer(redeemer, Runtime.ExecutingScriptHash, vars.redeemTokens);
             OnRedeem(redeemer, vars.redeemAmount, vars.redeemTokens);
 
@@ -1248,9 +1248,9 @@ namespace Ctoken
         }
 
 
-        public static uint getCashPrior()
+        public static BigInteger getCashPrior()
         {
-            return 250;
+            return accountTokens.Get(Runtime.EntryScriptHash); ;
         }
 
         public static uint doTransferIn(UInt160 from,uint amount)
