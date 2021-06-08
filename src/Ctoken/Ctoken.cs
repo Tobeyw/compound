@@ -2,7 +2,7 @@ using Neo;
 
 using Neo.SmartContract;
 using Neo.SmartContract.Framework;
-
+using Neo.SmartContract.Framework.Native;
 using Neo.SmartContract.Framework.Services;
 using System;
 
@@ -220,9 +220,10 @@ namespace Ctoken
             return accountTokens.Get(owner);
         }
 
-        /*public static BigInteger balanceOfUnderlying(UInt160 owner)
+        public static BigInteger balanceOfUnderlying(UInt160 owner)
         {
             Exp exchangeRate = new Exp();
+            //exchangeRate.mantissa = 200;
             exchangeRate.mantissa = exchangeRateCurrent();
             (MathError mErr, BigInteger balance) = mulScalarTruncate(exchangeRate, (ulong)accountTokens.Get(owner));
             if (mErr != MathError.NO_ERROR)
@@ -230,29 +231,29 @@ namespace Ctoken
                 throw new Exception("balance could not be calculated");
             }
             return balance;
-        }*/
+        }
 
-        /*public static (uint, BigInteger, BigInteger, BigInteger) getAccountSnapshot(UInt160 account)
+        public static (uint, BigInteger, BigInteger, BigInteger) getAccountSnapshot(UInt160 account)
         {
             BigInteger cTokenBalance = accountTokens.Get(account);
             BigInteger borrowBalance;
             BigInteger exchangeRateMantissa;
 
             MathError mErr;
-
-            (mErr, borrowBalance) = borrowBalanceStoredInternal(account);
+            (mErr, borrowBalance) = (MathError.NO_ERROR,200);
+            //(mErr, borrowBalance) = borrowBalanceStoredInternal(account);
             if (mErr != MathError.NO_ERROR)
             {
                 return ((uint)Error.MATH_ERROR, 0, 0, 0);
             }
-
+            //(mErr, exchangeRateMantissa) = (MathError.NO_ERROR,200);
             (mErr, exchangeRateMantissa) = exchangeRateStoredInternal();
             if (mErr != MathError.NO_ERROR)
             {
                 return ((uint)Error.MATH_ERROR, 0, 0, 0);
             }
             return ((uint)Error.NO_ERROR, cTokenBalance, borrowBalance, exchangeRateMantissa);
-        }*/
+        }
 
         public static uint getBlockNumber()
         {
@@ -290,21 +291,29 @@ namespace Ctoken
 
         public static BigInteger borrowBalanceCurrent(UInt160 account)
         {
-            if (accrueInterest() != (uint)Error.NO_ERROR)
-            {
-                throw new Exception("accrue interest failed");
-            }
-            return borrowBalanceStored(account);
-        }
+            /*            if (accrueInterest() != (uint)Error.NO_ERROR)
+                        {
+                            throw new Exception("accrue interest failed");
+                        }*/
 
-        public static BigInteger borrowBalanceStored(UInt160 account)
-        {
             (MathError err, BigInteger result) = borrowBalanceStoredInternal(account);
+
             if (err != MathError.NO_ERROR)
             {
                 throw new Exception("borrowBalanceStored: borrowBalanceStoredInternal failed");
             }
             return result;
+        }
+        public static BigInteger borrowBalanceStored(UInt160 account)
+        {
+            (MathError err, BigInteger result) = borrowBalanceStoredInternal(account);
+
+            if (err != MathError.NO_ERROR)
+            {
+                throw new Exception("borrowBalanceStored: borrowBalanceStoredInternal failed");
+            }
+            return result;
+
         }
 
         public static (MathError, BigInteger) borrowBalanceStoredInternal(UInt160 account)
@@ -334,14 +343,15 @@ namespace Ctoken
             }
 
             return (MathError.NO_ERROR, result);
+
         }
 
         public static BigInteger exchangeRateCurrent()
         {
-            if (accrueInterest() != (uint)Error.NO_ERROR)
+/*            if (accrueInterest() != (uint)Error.NO_ERROR)
             {
                 throw new Exception("accrue interest failed");
-            }
+            }*/
             return exchangeRateStored();
         }
 
@@ -371,6 +381,7 @@ namespace Ctoken
                 MathError mathErr;
 
                 (mathErr, cashPlusBorrowMinusReserves) = addThenSubUInt(totalCash, accSnapshot.totalBorrows, accSnapshot.totalReserves);
+
                 if (mathErr != MathError.NO_ERROR)
                 {
                     return (mathErr, 0);
@@ -382,8 +393,11 @@ namespace Ctoken
                     return (mathErr, 0);
                 }
                 return (MathError.NO_ERROR, exchangeRate.mantissa);
+
             }
         }
+
+
 
         public static BigInteger getCash()
         {
@@ -394,11 +408,11 @@ namespace Ctoken
 
 
 
-        public static uint accrueInterest()
+ /*       public static uint accrueInterest()
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
             uint currentBlockNumber = getBlockNumber();
-            uint accrualBlockNumberPrior = (uint)accSnapshot.accrualBlockNumber;
+            BigInteger accrualBlockNumberPrior = accSnapshot.accrualBlockNumber;
 
             if (accrualBlockNumberPrior == currentBlockNumber)
             {
@@ -544,7 +558,7 @@ namespace Ctoken
             OnTransfer(Runtime.ExecutingScriptHash, minter, mintTokens);
 
             return ((uint)Error.NO_ERROR, actualMintAmount);
-        }
+        }*/
 
         /*public static uint redeemInternal(uint redeeemTokens)
         {
@@ -1254,6 +1268,14 @@ namespace Ctoken
         public static BigInteger doTransferOut(UInt160 to,BigInteger amount)
         {
             return amount;
+        }
+
+
+
+        public static void Destroy()
+        {
+            //if (!IsOwner()) throw new Exception("No authorization.");
+            ContractManagement.Destroy();
         }
     }
 }
