@@ -53,18 +53,18 @@ namespace comptroller
         public static event Action<UInt160, UInt160, Boolean> Membership;
 
 
+        private static readonly BigInteger Ten2Power8 = 100000000; // price or amount decimal = 10^8
+        private static readonly BigInteger Ten2Power18 = 1000000000000000000; // value decimal = 10 ^ 18
 
-        private static ulong closeFactorMinMantissa = 5_000_000;
+        private static BigInteger closeFactorMinMantissa = 5_000_000;
 
-        private static ulong closeFactorMaxMantissa = 90_000_000;
+        private static BigInteger closeFactorMaxMantissa = 90_000_000;
 
-        private static ulong collateralFactorMaxMantissa = 90_000_000;
-        private static ulong carry = 100_000_000;
+        private static BigInteger collateralFactorMaxMantissa = 90_000_000;
+
         #endregion
 
 
-        private static readonly BigInteger Ten2Power8 = 100000000; // price or amount decimal = 10^8
-        private static readonly BigInteger Ten2Power18 = 1000000000000000000; // value decimal = 10 ^ 18
         public static Boolean isComptroller() => true;
 
         /// <summary>
@@ -174,7 +174,7 @@ namespace comptroller
         {
             Transaction tx = (Transaction)Runtime.ScriptContainer;
             Object AccountSnapshotObj = Contract.Call(cToken, "getAccountSnapshot", CallFlags.All, new object[] { tx.Sender });
-            (int, BigInteger, BigInteger,ulong) accountSnapshot = ((int, BigInteger, BigInteger,ulong))AccountSnapshotObj;
+            (int, BigInteger, BigInteger,BigInteger) accountSnapshot = ((int, BigInteger, BigInteger, BigInteger))AccountSnapshotObj;
             
             int err = accountSnapshot.Item1;
             if (err == 0) throw new Exception("exitMarket: getAccountSnapshot failed");
@@ -185,8 +185,8 @@ namespace comptroller
             Market marketToExit = markets.Get(cToken);
             if (!marketToExit.accountMembership[tx.Sender]) return (int)ErrorReporter.Error.NO_ERROR;
             membershipController(cToken, tx.Sender, false);
-            UInt160[] userAssetList = accountAssets.Get(tx.Sender);
-            int len = userAssetList.Length;
+            List<UInt160> userAssetList = accountAssets.Get(tx.Sender);
+            int len = userAssetList.Count;
             int assetIndex = len;
             for(int i = 0;i < len; i++)
             {
@@ -197,17 +197,10 @@ namespace comptroller
 
 
             }
+            
             if (assetIndex >= len) throw new Exception("Index out of range");
-            UInt160[] userAssetListNew = new UInt160[len - 1];
-            for(int i = 0; i < len - 1; i++)
-            {
-                if (i < assetIndex) userAssetListNew[i] = userAssetList[i];
-                else
-                {
-                    userAssetListNew[i] = userAssetList[i+1];
-                }
-            }
-            accountAssets.Put(tx.Sender, userAssetListNew);
+            userAssetList.RemoveAt(assetIndex);
+            accountAssets.Put(tx.Sender, userAssetList);
             MarketExited(tx.Sender, cToken);
             return (int)ErrorReporter.Error.NO_ERROR;
         }

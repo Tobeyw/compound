@@ -53,7 +53,7 @@ namespace comptroller
 
 
 
-        public static int setLiquidationIncentive(ulong newLiquidationIncentiveMantissa)
+        public static int setLiquidationIncentive(BigInteger newLiquidationIncentiveMantissa)
         {
 
 
