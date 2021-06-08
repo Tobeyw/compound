@@ -139,7 +139,7 @@ namespace Ctoken
             return (MathError.NO_ERROR, expReturn);
         }
 
-        public static (MathError,Exp) mulExp(BigInteger a, BigInteger b)
+        public static (MathError,Exp) mulBigInteger(BigInteger a, BigInteger b)
         {
             Exp expA = new Exp();
             Exp expB = new Exp();

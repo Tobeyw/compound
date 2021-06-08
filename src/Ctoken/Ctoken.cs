@@ -220,7 +220,7 @@ namespace Ctoken
             return accountTokens.Get(owner);
         }
 
-        public static BigInteger balanceOfUnderlying(UInt160 owner)
+        /*public static BigInteger balanceOfUnderlying(UInt160 owner)
         {
             Exp exchangeRate = new Exp();
             exchangeRate.mantissa = exchangeRateCurrent();
@@ -229,10 +229,10 @@ namespace Ctoken
             {
                 throw new Exception("balance could not be calculated");
             }
-            return (BigInteger)balance;
-        }
+            return balance;
+        }*/
 
-        public static (uint, BigInteger, BigInteger, BigInteger) getAccountSnapshot(UInt160 account)
+        /*public static (uint, BigInteger, BigInteger, BigInteger) getAccountSnapshot(UInt160 account)
         {
             BigInteger cTokenBalance = accountTokens.Get(account);
             BigInteger borrowBalance;
@@ -252,7 +252,7 @@ namespace Ctoken
                 return ((uint)Error.MATH_ERROR, 0, 0, 0);
             }
             return ((uint)Error.NO_ERROR, cTokenBalance, borrowBalance, exchangeRateMantissa);
-        }
+        }*/
 
         public static uint getBlockNumber()
         {
@@ -275,10 +275,10 @@ namespace Ctoken
         public static BigInteger totalBorrowCurrent()
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            if (accrueInterest() != (uint)Error.NO_ERROR)
+            /*if (accrueInterest() != (uint)Error.NO_ERROR)
             {
                 throw new Exception("accrue interest failed");
-            }
+            }*/
             return accSnapshot.totalBorrows;
         }
 
@@ -336,7 +336,7 @@ namespace Ctoken
             return (MathError.NO_ERROR, result);
         }
 
-        public static uint exchangeRateCurrent()
+        public static BigInteger exchangeRateCurrent()
         {
             if (accrueInterest() != (uint)Error.NO_ERROR)
             {
@@ -345,9 +345,9 @@ namespace Ctoken
             return exchangeRateStored();
         }
 
-        public static uint exchangeRateStored()
+        public static BigInteger exchangeRateStored()
         {
-            (MathError err, uint result) = exchangeRateStoredInternal();
+            (MathError err, BigInteger result) = exchangeRateStoredInternal();
             if (err != MathError.NO_ERROR)
             {
                 throw new Exception("exchangedRateStored:exchangeRateStoredInternal failed");
@@ -355,13 +355,13 @@ namespace Ctoken
             return result;
         }
 
-        public static (MathError, uint) exchangeRateStoredInternal()
+        public static (MathError, BigInteger) exchangeRateStoredInternal()
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            uint _totalSupply = (uint)accSnapshot.totalSupply;
+            BigInteger _totalSupply = accSnapshot.totalSupply;
             if (_totalSupply == 0)
             {
-                return (MathError.NO_ERROR, (uint)accSnapshot.initialExchangeRateMantissa);
+                return (MathError.NO_ERROR, accSnapshot.initialExchangeRateMantissa);
             }
             else
             {
@@ -381,7 +381,7 @@ namespace Ctoken
                 {
                     return (mathErr, 0);
                 }
-                return (MathError.NO_ERROR, (uint)exchangeRate.mantissa);
+                return (MathError.NO_ERROR, exchangeRate.mantissa);
             }
         }
 
@@ -483,14 +483,14 @@ namespace Ctoken
         public static (uint, BigInteger) mintFresh(UInt160 minter, BigInteger mintAmount)
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-/*            UInt160 theToken = Runtime.ExecutingScriptHash;
+            UInt160 theToken = Runtime.ExecutingScriptHash;
             UInt160 comptroller = getComptroller();
             Object allowedObj = Contract.Call(comptroller, "mintAllowed", CallFlags.All, new object[] { theToken,minter,mintAmount });
             int allowed = (int)allowedObj;
             if (allowed != 0)
             {
                 return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.MINT_COMPTROLLER_REJECTION, (int)allowed), 0);
-            }*/
+            }
 
             if (accSnapshot.accrualBlockNumber != getBlockNumber())
             {
@@ -502,7 +502,7 @@ namespace Ctoken
             BigInteger totalSupplyNew;
             BigInteger accountTokensNew;
             BigInteger actualMintAmount;
-
+            //(mathErr, exchangeRateMantissa) = (MathError.NO_ERROR,200);
             (mathErr, exchangeRateMantissa) = exchangeRateStoredInternal();
 
             if (mathErr != MathError.NO_ERROR)
