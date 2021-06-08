@@ -159,7 +159,7 @@ namespace Neo.SmartContract.Framework.UnitTests.Services
             {
                 Hash = _engine.EntryScriptHash,
                 Nef = _engine.Nef,
-                Manifest = ContractManifest.FromJson(_engine.Manifest),
+                Manifest = ContractManifest.FromJson(_engine.Manifest)
             });
 
             //utilizationRate

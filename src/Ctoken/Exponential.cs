@@ -106,7 +106,7 @@ namespace Ctoken
             return getExp(numerator, divisor.mantissa);
         }
 
-        public static (MathError, BigInteger) divScalarByExpTruncate(ulong scalar,Exp divisor)
+        public static (MathError, BigInteger) divScalarByExpTruncate(BigInteger scalar,Exp divisor)
         {
             (MathError err, Exp fraction) = divScalarByExp(scalar, divisor);
             if (err != MathError.NO_ERROR)

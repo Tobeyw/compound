@@ -159,9 +159,9 @@ namespace Neo.SmartContract.Framework.UnitTests.Services
             {
                 Hash = _engine.EntryScriptHash,
                 Nef = _engine.Nef,
-                Manifest = ContractManifest.FromJson(_engine.Manifest),
+                Manifest = ContractManifest.FromJson(_engine.Manifest)
             });
-
+            
             //putMarketIsList
             engine.Reset();
             UInt160 asset1 = "NajuJa8fyvFrT9dAnu3QmoFSNZFWJbAa8p".ToScriptHash(ProtocolSettings.Default.AddressVersion);

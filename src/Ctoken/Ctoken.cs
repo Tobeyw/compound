@@ -16,6 +16,8 @@ namespace Ctoken
     [ManifestExtra("Description", "This is Ctoken")]
     public partial class Ctoken : SmartContract
     {
+        private static readonly BigInteger Ten2Power8 = 100000000; // price or amount decimal = 10^8
+        private static readonly BigInteger Ten2Power18 = 1000000000000000000; // ratio decimal = 10 ^ 18
         [InitialValue("NX4pQCjXkJHMKzXw3ccVdEFw6SrgePNP6r", ContractParameterType.Hash160)]
         static readonly UInt160 Owner = default;
         public static int initialize(
@@ -69,21 +71,20 @@ namespace Ctoken
             return 0;
         }
 
-        private static readonly BigInteger Ten2Power8 = 100000000; // price or amount decimal = 10^8
-        private static readonly BigInteger Ten2Power18 = 1000000000000000000; // value decimal = 10 ^ 18
+        
         #region Notidicaitons
 
         [DisplayName("Transfer")]
-        public static event Action<UInt160, UInt160, uint> OnTransfer;
+        public static event Action<UInt160, UInt160, BigInteger> OnTransfer;
 
         [DisplayName("Approval")]
-        public static event Action<UInt160, UInt160, uint> OnApproval;
+        public static event Action<UInt160, UInt160, BigInteger> OnApproval;
 
         [DisplayName("AccrueInterest")]
         public static event Action<BigInteger, BigInteger, BigInteger, BigInteger> OnAccrueInterest;
 
         [DisplayName("Mint")]
-        public static event Action<UInt160, ulong, ulong> OnMint;
+        public static event Action<UInt160, BigInteger, BigInteger> OnMint;
 
         [DisplayName("Redeem")]
         public static event Action<UInt160, ulong, ulong> OnRedeem;
@@ -127,7 +128,7 @@ namespace Ctoken
 
 
 
-        public static BigInteger transferTokens(UInt160 spender, UInt160 src, UInt160 dst, uint tokens)
+        public static BigInteger transferTokens(UInt160 spender, UInt160 src, UInt160 dst, BigInteger tokens)
         {
 /*            uint allowed = (uint)comptroller.comptroller.transferAllowed(spender, src, dst, tokens);
             if (allowed != 0)
@@ -184,26 +185,26 @@ namespace Ctoken
             return (int)Error.NO_ERROR;
         }
 
-        public static bool transfer(UInt160 dst, uint amount)
+        public static bool transfer(UInt160 dst, BigInteger amount)
         {
             Transaction tx = (Transaction)Runtime.ScriptContainer;
             UInt160 sender = tx.Sender;
             return transferTokens(sender, sender, dst, amount) == (int)Error.NO_ERROR;
         }
 
-        public static bool transferFrom(UInt160 src, UInt160 dst, uint amount)
+        public static bool transferFrom(UInt160 src, UInt160 dst, BigInteger amount)
         {
             Transaction tx = (Transaction)Runtime.ScriptContainer;
             UInt160 sender = tx.Sender;
             return transferTokens(sender, src, dst, amount) == (int)Error.NO_ERROR;
         }
 
-        public static bool approve(UInt160 spender, uint amount)
+        public static bool approve(UInt160 spender, BigInteger amount)
         {
             Transaction tx = (Transaction)Runtime.ScriptContainer;
             UInt160 src = tx.Sender;
             Map<UInt160, BigInteger> map = transferAllowance.Get(src);
-            map[spender] = (BigInteger)amount;
+            map[spender] = amount;
             OnApproval(src, spender, amount);
             return true;
         }
@@ -231,11 +232,11 @@ namespace Ctoken
             return (BigInteger)balance;
         }
 
-        public static (uint, uint, uint, uint) getAccountSnapshot(UInt160 account)
+        public static (uint, BigInteger, BigInteger, BigInteger) getAccountSnapshot(UInt160 account)
         {
-            uint cTokenBalance = (uint)accountTokens.Get(account);
-            uint borrowBalance;
-            uint exchangeRateMantissa;
+            BigInteger cTokenBalance = accountTokens.Get(account);
+            BigInteger borrowBalance;
+            BigInteger exchangeRateMantissa;
 
             MathError mErr;
 
@@ -271,23 +272,23 @@ namespace Ctoken
             return (BigInteger)getSupplyRate(getCashPrior(), accSnapshot.totalBorrows, accSnapshot.totalReserves,accSnapshot.reservesFactorMantissa);
         }
 
-        public static uint totalBorrowCurrent()
+        public static BigInteger totalBorrowCurrent()
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
             if (accrueInterest() != (uint)Error.NO_ERROR)
             {
                 throw new Exception("accrue interest failed");
             }
-            return (uint)accSnapshot.totalBorrows;
+            return accSnapshot.totalBorrows;
         }
 
-        public static uint totalBorrowStored()
+        public static BigInteger totalBorrowStored()
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
-            return (uint)accSnapshot.totalBorrows;
+            return accSnapshot.totalBorrows;
         }
 
-        public static uint borrowBalanceCurrent(UInt160 account)
+        public static BigInteger borrowBalanceCurrent(UInt160 account)
         {
             if (accrueInterest() != (uint)Error.NO_ERROR)
             {
@@ -296,9 +297,9 @@ namespace Ctoken
             return borrowBalanceStored(account);
         }
 
-        public static uint borrowBalanceStored(UInt160 account)
+        public static BigInteger borrowBalanceStored(UInt160 account)
         {
-            (MathError err, uint result) = borrowBalanceStoredInternal(account);
+            (MathError err, BigInteger result) = borrowBalanceStoredInternal(account);
             if (err != MathError.NO_ERROR)
             {
                 throw new Exception("borrowBalanceStored: borrowBalanceStoredInternal failed");
@@ -306,7 +307,7 @@ namespace Ctoken
             return result;
         }
 
-        public static (MathError, uint) borrowBalanceStoredInternal(UInt160 account)
+        public static (MathError, BigInteger) borrowBalanceStoredInternal(UInt160 account)
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
             MathError mathErr;
@@ -332,7 +333,7 @@ namespace Ctoken
                 return (mathErr, 0);
             }
 
-            return (MathError.NO_ERROR, (uint)result);
+            return (MathError.NO_ERROR, result);
         }
 
         public static uint exchangeRateCurrent()
@@ -467,7 +468,7 @@ namespace Ctoken
             return (uint)Error.NO_ERROR;
         }
 
-        public static (uint, uint) mintInternal(uint mintAmount)
+        public static (uint, BigInteger) mintInternal(BigInteger mintAmount)
         {
             uint error = accrueInterest();
             if (error != (uint)(Error.NO_ERROR))
@@ -479,18 +480,7 @@ namespace Ctoken
             return mintFresh(sender, mintAmount);
         }
 
-        public struct MintLocalVars
-        {
-            public Error err;
-            public MathError mathErr;
-            public uint exchangeRateMantissa;
-            public uint mintTokens;
-            public uint totalSupplyNew;
-            public uint accountTokensNew;
-            public uint actualMintAmount;
-        }
-
-        public static (uint, uint) mintFresh(UInt160 minter, uint mintAmount)
+        public static (uint, BigInteger) mintFresh(UInt160 minter, BigInteger mintAmount)
         {
             AccountSnapshot accSnapshot = defaultMessage.Get();
 /*            UInt160 theToken = Runtime.ExecutingScriptHash;
@@ -507,11 +497,11 @@ namespace Ctoken
                 return (fail(Error.MARKET_NOT_FRESH, FailureInfo.MINT_FRESHNESS_CHECK), 0);
             }
             MathError mathErr;
-            uint exchangeRateMantissa;
-            uint mintTokens;
-            uint totalSupplyNew;
-            uint accountTokensNew;
-            uint actualMintAmount;
+            BigInteger exchangeRateMantissa;
+            BigInteger mintTokens;
+            BigInteger totalSupplyNew;
+            BigInteger accountTokensNew;
+            BigInteger actualMintAmount;
 
             (mathErr, exchangeRateMantissa) = exchangeRateStoredInternal();
 
@@ -533,7 +523,7 @@ namespace Ctoken
 
             BigInteger totalSupplyNewReplace;
             (mathErr, totalSupplyNewReplace) = addUInt(accSnapshot.totalSupply, mintTokens);
-            totalSupplyNew = (uint)totalSupplyNewReplace;
+            totalSupplyNew = totalSupplyNewReplace;
             if (mathErr != MathError.NO_ERROR)
             {
                 throw new Exception("MINT_NEW_TOTAL_SUPPLY_CALCULATION_FAILED");
@@ -541,7 +531,7 @@ namespace Ctoken
 
             BigInteger accountTokensNewRepalce;
             (mathErr, accountTokensNewRepalce) = addUInt((ulong)accountTokens.Get(minter), mintTokens);
-            accountTokensNew = (uint)accountTokensNewRepalce;
+            accountTokensNew = accountTokensNewRepalce;
             if (mathErr != MathError.NO_ERROR)
             {
                 throw new Exception("MINT_NEW_ACCOUNT_BALANCE_CALCULATION_FAILED");
@@ -1243,7 +1233,6 @@ namespace Ctoken
 
             InterestModel.Put(interestModel);
 
-
             return (uint)Error.NO_ERROR;
         }
 
@@ -1253,7 +1242,7 @@ namespace Ctoken
             return accountTokens.Get(Runtime.EntryScriptHash); ;
         }
 
-        public static uint doTransferIn(UInt160 from,uint amount)
+        public static BigInteger doTransferIn(UInt160 from, BigInteger amount)
         {
             Transaction tx = (Transaction)Runtime.ScriptContainer;
             UInt160 sender = tx.Sender;
@@ -1262,7 +1251,7 @@ namespace Ctoken
             return amount;
         }
 
-        public static uint doTransferOut(UInt160 to,uint amount)
+        public static BigInteger doTransferOut(UInt160 to,BigInteger amount)
         {
             return amount;
         }
